@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>내 계좌 - HTS</title>
+</head>
+<body>
+    <h2>{{ request.user.username }}님의 계좌 정보</h2>
+    <p>💰 <b>보유 투자금:</b> {{ balance|floatformat:0 }} 원</p>
+    
+    <hr>
+    
+    <h3>📈 보유 주식 현황</h3>
+    {% if portfolio %}
+        <table border="1" cellpadding="5" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>종목 코드</th>
+                    <th>보유 수량</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for symbol, quantity in portfolio.items %}
+                <tr>
+                    <td>{{ symbol }}</td>
+                    <td>{{ quantity }} 주</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>현재 보유 중인 주식이 없습니다.</p>
+    {% endif %}
+    
+    <br><br>
+    <form method="POST" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">로그아웃</button></form>
+</body>
+</html>

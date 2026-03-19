@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인 - HTS</title>
+</head>
+<body>
+    <h2>주식 거래 시스템 로그인</h2>
+    
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <p><label>아이디: <input type="text" name="username" required></label></p>
+        <p><label>비밀번호: <input type="password" name="password" required></label></p>
+        <button type="submit">로그인</button>
+    </form>
+    <br>
+    <a href="/">메인으로 돌아가기</a>
+</body>
+</html>

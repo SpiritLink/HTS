@@ -1,8 +1,9 @@
 from django.urls import path
-from . import views
+from . import controllers
 
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('login/', views.login_api, name='login'),
-    path('portfolio/<str:username>/', views.get_portfolio, name='portfolio'),
+    path('', controllers.index, name='index'),
+    path('login/', controllers.login_view, name='login'),
+    path('logout/', controllers.logout_view, name='logout'),
+    path('dashboard/', controllers.dashboard, name='dashboard'),
 ]
