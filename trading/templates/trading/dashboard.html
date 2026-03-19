@@ -2,37 +2,69 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>내 계좌 - HTS</title>
+    <style>
+        /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
+        .dashboard-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .header-area { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
+        .header-area h2 { margin: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; }
+        .summary-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 30px; margin-bottom: 40px; text-align: center; }
+        .summary-card span { display: block; font-size: 16px; color: #555; margin-bottom: 12px; font-weight: 600; }
+        .summary-card strong { font-size: 36px; color: #004ea2; letter-spacing: -1px; }
+        h3 { font-size: 20px; color: #111; margin-bottom: 16px; padding-left: 12px; border-left: 4px solid #004ea2; }
+        
+        /* 공공기관 표준 표(Table) 스타일 */
+        .table-krds { width: 100%; border-collapse: collapse; margin-bottom: 40px; text-align: center; }
+        .table-krds th, .table-krds td { padding: 16px; border-bottom: 1px solid #dee2e6; }
+        .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
+        .table-krds tbody tr:hover { background-color: #f1f3f5; transition: background-color 0.2s; }
+        .table-krds td:first-child { font-weight: 600; color: #111; }
+        
+        .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 40px; font-size: 15px; }
+        .btn-secondary { padding: 10px 20px; background-color: #fff; color: #495057; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+    </style>
 </head>
 <body>
-    <h2>{{ request.user.username }}님의 계좌 정보</h2>
-    <p>💰 <b>보유 투자금:</b> {{ balance|floatformat:0 }} 원</p>
-    
-    <hr>
-    
-    <h3>📈 보유 주식 현황</h3>
-    {% if portfolio %}
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>종목 코드</th>
-                    <th>보유 수량</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for symbol, quantity in portfolio.items %}
-                <tr>
-                    <td>{{ symbol }}</td>
-                    <td>{{ quantity }} 주</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>현재 보유 중인 주식이 없습니다.</p>
-    {% endif %}
-    
-    <br><br>
-    <form method="POST" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">로그아웃</button></form>
+    <main class="dashboard-container">
+        <header class="header-area">
+            <h2>{{ request.user.username }}님의 계좌 정보</h2>
+            <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-secondary">로그아웃</button>
+            </form>
+        </header>
+        
+        <section class="summary-card">
+            <span>💰 보유 투자금</span>
+            <strong>{{ balance|floatformat:0 }} 원</strong>
+        </section>
+        
+        <section>
+            <h3>📈 보유 주식 현황</h3>
+            {% if portfolio %}
+                <table class="table-krds">
+                    <thead>
+                        <tr>
+                            <th>종목 코드</th>
+                            <th>보유 수량</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for symbol, quantity in portfolio.items %}
+                        <tr>
+                            <td>{{ symbol }}</td>
+                            <td>{{ quantity }} 주</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-msg">현재 보유 중인 주식이 없습니다.</div>
+            {% endif %}
+        </section>
+    </main>
 </body>
 </html>

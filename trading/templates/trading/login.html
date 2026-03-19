@@ -2,22 +2,52 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - HTS</title>
+    <style>
+        /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .login-container { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 440px; box-sizing: border-box; }
+        h2 { margin-top: 0; font-size: 24px; color: #111; text-align: center; margin-bottom: 30px; letter-spacing: -0.5px; }
+        .form-group { margin-bottom: 24px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px; color: #111; }
+        .form-control { width: 100%; padding: 14px 16px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-control:focus { border-color: #004ea2; box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.15); }
+        .btn-primary { width: 100%; padding: 16px; background-color: #004ea2; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #003a79; }
+        .error-message { background-color: #fbeef0; color: #d32f2f; padding: 14px; border-radius: 6px; margin-bottom: 24px; font-size: 14px; border: 1px solid #f8d7da; }
+        .link-return { display: block; text-align: center; margin-top: 24px; color: #555; text-decoration: none; font-size: 15px; }
+        .link-return:hover { text-decoration: underline; color: #111; }
+    </style>
 </head>
 <body>
-    <h2>주식 거래 시스템 로그인</h2>
-    
-    {% if error_message %}
-        <p style="color: red;">{{ error_message }}</p>
-    {% endif %}
+    <main class="login-container">
+        <h2>주식 거래 시스템 로그인</h2>
+        
+        {% if error_message %}
+            <div class="error-message">
+                <strong>오류:</strong> {{ error_message }}
+            </div>
+        {% endif %}
 
-    <form method="POST" action="{% url 'login' %}">
-        {% csrf_token %}
-        <p><label>아이디: <input type="text" name="username" required></label></p>
-        <p><label>비밀번호: <input type="password" name="password" required></label></p>
-        <button type="submit">로그인</button>
-    </form>
-    <br>
-    <a href="/">메인으로 돌아가기</a>
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            
+            <!-- 웹 접근성을 위해 label의 for와 input의 id를 일치시킵니다. -->
+            <div class="form-group">
+                <label for="username">아이디</label>
+                <input type="text" id="username" name="username" class="form-control" required placeholder="아이디를 입력하세요">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" name="password" class="form-control" required placeholder="비밀번호를 입력하세요">
+            </div>
+            
+            <button type="submit" class="btn-primary">로그인</button>
+        </form>
+        
+        <a href="/" class="link-return">메인으로 돌아가기</a>
+    </main>
 </body>
 </html>

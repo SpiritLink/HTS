@@ -5,13 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .services import get_user_portfolio
 
 def index(request):
-    return HttpResponse("""
-    <h1>주식 거래 시스템 (HTS) - Django</h1>
-    <p>장고 서버가 정상적으로 실행 중입니다.</p>
-    <hr>
-    <p>🔑 <a href="/login/"><b>로그인 화면으로 이동하기</b></a></p>
-    <p>⚙️ <b>관리자 페이지:</b> <a href="/admin/">/admin/</a></p>
-    """)
+    return render(request, 'trading/index.html')
 
 def login_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동

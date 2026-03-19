@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주식 거래 시스템 (HTS)</title>
+    <style>
+        /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .main-container { background: #fff; padding: 50px 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; text-align: center; }
+        h1 { margin-top: 0; font-size: 28px; color: #111; margin-bottom: 16px; letter-spacing: -0.5px; }
+        p.description { font-size: 16px; color: #555; margin-bottom: 40px; line-height: 1.5; }
+        
+        /* 넉넉한 터치 영역과 고대비 색상을 적용한 버튼 그룹 */
+        .btn-group { display: flex; flex-direction: column; gap: 12px; }
+        .btn { display: block; width: 100%; padding: 16px; border-radius: 6px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; transition: all 0.2s; }
+        
+        /* 정부서비스 표준 강조 색상 */
+        .btn-primary { background-color: #004ea2; color: #fff; border: 1px solid #004ea2; }
+        .btn-primary:hover { background-color: #003a79; border-color: #003a79; }
+        
+        .btn-outline { background-color: #fff; color: #004ea2; border: 1px solid #004ea2; }
+        .btn-outline:hover { background-color: #f1f6fa; }
+    </style>
+</head>
+<body>
+    <main class="main-container">
+        <h1>주식 거래 시스템 (HTS)</h1>
+        <p class="description">안전하고 편리한 모의 주식 거래를 시작해 보세요.<br>서비스를 이용하시려면 로그인이 필요합니다.</p>
+        
+        <div class="btn-group">
+            <a href="{% url 'login' %}" class="btn btn-primary">로그인 화면으로 이동</a>
+            <a href="/admin/" class="btn btn-outline">시스템 관리자(Admin) 페이지</a>
+        </div>
+    </main>
+</body>
+</html>
