@@ -10,7 +10,19 @@ SECRET_KEY = 'django-insecure-temporary-key-for-hts-project'
 # 디버그 모드 (개발 중에는 True)
 DEBUG = True
 
+# 연결하신 도메인 이름을 여기에 입력하세요 (예: 'hts.example.com')
 ALLOWED_HOSTS = ['*']
+
+# ==========================================
+# HTTPS 및 운영(Production) 환경 보안 설정
+# ==========================================
+# 웹 서버(Nginx 등)가 HTTPS로 요청을 받았음을 Django에게 알려주는 설정입니다.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 실제 도메인(HTTPS)으로 서비스할 준비가 완료되면 아래 주석을 해제하여 보안을 강화하세요.
+# SECURE_SSL_REDIRECT = True        # 모든 HTTP 접속을 HTTPS로 자동 리다이렉트
+# SESSION_COOKIE_SECURE = True      # HTTPS 연결에서만 로그인 세션 쿠키 전송
+# CSRF_COOKIE_SECURE = True         # HTTPS 연결에서만 CSRF 보안 쿠키 전송
 
 
 # Application definition
@@ -64,7 +76,7 @@ DATABASES = {
         'NAME': 'postgres',       # 구성하신 PostgreSQL 데이터베이스 이름으로 변경하세요
         'USER': 'yoojisang',     # 사용자명
         'PASSWORD': '1q2w3e4r', # 비밀번호
-        'HOST': '127.0.0.1',    # DB 호스트 주소 (로컬인 경우 127.0.0.1)ßßßß
+        'HOST': '127.0.0.1',    # DB 호스트 주소 (로컬인 경우 127.0.0.1)
         'PORT': '5432',         # 기본 포트
     }
 }
