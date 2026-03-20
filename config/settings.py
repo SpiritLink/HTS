@@ -34,7 +34,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # 직접 만든 앱 등록
-    'trading',
+    'hts',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -103,4 +104,4 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 커스텀 유저 모델 설정 (필수!)
-AUTH_USER_MODEL = 'trading.User'
+AUTH_USER_MODEL = 'hts.User'

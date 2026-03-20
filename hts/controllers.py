@@ -6,12 +6,12 @@ from .services import get_user_portfolio
 from .models import User
 
 def index(request):
-    return render(request, 'trading/index.html')
+    return render(request, 'hts/index.html')
 
 def login_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('hts:dashboard')
         
     error_message = None
     if request.method == "POST":
@@ -23,16 +23,16 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user) # 세션 로그인 처리
-            return redirect('dashboard') # 성공 시 대시보드로 이동
+            return redirect('hts:dashboard') # 성공 시 대시보드로 이동
         else:
             error_message = "아이디 또는 비밀번호가 일치하지 않습니다."
             
-    return render(request, 'trading/login.html', {'error_message': error_message})
+    return render(request, 'hts/login.html', {'error_message': error_message})
 
 def register_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('hts:dashboard')
         
     error_message = None
     if request.method == "POST":
@@ -49,18 +49,18 @@ def register_view(request):
             # 계정 생성 (비밀번호 자동 암호화 처리)
             User.objects.create_user(username=username, password=password)
             # 회원가입 성공 후 로그인 페이지로 이동
-            return redirect('login')
+            return redirect('hts:login')
             
-    return render(request, 'trading/register.html', {'error_message': error_message})
+    return render(request, 'hts/register.html', {'error_message': error_message})
 
 def logout_view(request):
     logout(request)
-    return redirect('index')
+    return redirect('hts:index')
 
-@login_required(login_url='/login/')
+@login_required(login_url='/hts/login/')
 def dashboard(request):
     # 1. Controller가 Service에게 비즈니스 로직 처리(계산)를 위임
     portfolio_data = get_user_portfolio(request.user)
     
     # 2. Service로부터 받은 결과를 Template(화면)으로 전달
-    return render(request, 'trading/dashboard.html', portfolio_data)
+    return render(request, 'hts/dashboard.html', portfolio_data)

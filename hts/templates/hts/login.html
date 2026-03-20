@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원가입 - HTS</title>
+    <title>로그인 - HTS</title>
     <style>
         /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
         body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .register-container { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 440px; box-sizing: border-box; }
+        .login-container { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 440px; box-sizing: border-box; }
         h2 { margin-top: 0; font-size: 24px; color: #111; text-align: center; margin-bottom: 30px; letter-spacing: -0.5px; }
         .form-group { margin-bottom: 24px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px; color: #111; }
@@ -21,37 +21,34 @@
     </style>
 </head>
 <body>
-    <main class="register-container">
-        <h2>주식 거래 시스템 회원가입</h2>
-        
+    <main class="login-container">
+        <h2>주식 거래 시스템 로그인</h2>
+
         {% if error_message %}
             <div class="error-message">
                 <strong>오류:</strong> {{ error_message }}
             </div>
         {% endif %}
 
-        <form method="POST" action="{% url 'register' %}">
+        <form method="POST" action="{% url 'hts:login' %}">
             {% csrf_token %}
-            
+
+            <!-- 웹 접근성을 위해 label의 for와 input의 id를 일치시킵니다. -->
             <div class="form-group">
                 <label for="username">아이디</label>
-                <input type="text" id="username" name="username" class="form-control" required placeholder="사용할 아이디를 입력하세요">
+                <input type="text" id="username" name="username" class="form-control" required placeholder="아이디를 입력하세요">
             </div>
-            
+
             <div class="form-group">
                 <label for="password">비밀번호</label>
                 <input type="password" id="password" name="password" class="form-control" required placeholder="비밀번호를 입력하세요">
             </div>
 
-            <div class="form-group">
-                <label for="password_confirm">비밀번호 확인</label>
-                <input type="password" id="password_confirm" name="password_confirm" class="form-control" required placeholder="비밀번호를 한 번 더 입력하세요">
-            </div>
-            
-            <button type="submit" class="btn-primary">가입하기</button>
+            <button type="submit" class="btn-primary">로그인</button>
         </form>
-        
-        <a href="{% url 'login' %}" class="link-return">이미 계정이 있으신가요? 로그인하기</a>
+
+        <a href="{% url 'hts:register' %}" class="link-return">계정이 없으신가요? <b>회원가입하기</b></a>
+        <a href="{% url 'hts:index' %}" class="link-return" style="margin-top: 10px;">메인으로 돌아가기</a>
     </main>
 </body>
 </html>

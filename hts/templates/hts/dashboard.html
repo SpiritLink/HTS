@@ -14,14 +14,14 @@
         .summary-card span { display: block; font-size: 16px; color: #555; margin-bottom: 12px; font-weight: 600; }
         .summary-card strong { font-size: 36px; color: #004ea2; letter-spacing: -1px; }
         h3 { font-size: 20px; color: #111; margin-bottom: 16px; padding-left: 12px; border-left: 4px solid #004ea2; }
-        
+
         /* 공공기관 표준 표(Table) 스타일 */
         .table-krds { width: 100%; border-collapse: collapse; margin-bottom: 40px; text-align: center; }
         .table-krds th, .table-krds td { padding: 16px; border-bottom: 1px solid #dee2e6; }
         .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
         .table-krds tbody tr:hover { background-color: #f1f3f5; transition: background-color 0.2s; }
         .table-krds td:first-child { font-weight: 600; color: #111; }
-        
+
         .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 40px; font-size: 15px; }
         .btn-secondary { padding: 10px 20px; background-color: #fff; color: #495057; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
@@ -31,17 +31,17 @@
     <main class="dashboard-container">
         <header class="header-area">
             <h2>{{ request.user.username }}님의 계좌 정보</h2>
-            <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+            <form method="POST" action="{% url 'hts:logout' %}" style="margin: 0;">
                 {% csrf_token %}
                 <button type="submit" class="btn-secondary">로그아웃</button>
             </form>
         </header>
-        
+
         <section class="summary-card">
             <span>💰 보유 투자금</span>
             <strong>{{ balance|floatformat:0 }} 원</strong>
         </section>
-        
+
         <section>
             <h3>📈 보유 주식 현황</h3>
             {% if portfolio %}

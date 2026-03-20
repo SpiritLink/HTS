@@ -1,6 +1,8 @@
 from django.urls import path
 from . import controllers
 
+app_name = 'hts'
+
 urlpatterns = [
     path('', controllers.index, name='index'),
     path('login/', controllers.login_view, name='login'),
