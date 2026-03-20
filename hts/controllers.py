@@ -1,9 +1,9 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from .services import get_user_portfolio
-from .models import User
+from .models import User, Stock
 
 def index(request):
     return render(request, 'hts/index.html')
@@ -62,5 +62,29 @@ def dashboard(request):
     # 1. Controller가 Service에게 비즈니스 로직 처리(계산)를 위임
     portfolio_data = get_user_portfolio(request.user)
     
+    # 시장 목록을 가져옴 (중복 제거)
+    markets = Stock.objects.values_list('market', flat=True).distinct()
+    portfolio_data['markets'] = markets
+    
     # 2. Service로부터 받은 결과를 Template(화면)으로 전달
     return render(request, 'hts/dashboard.html', portfolio_data)
+
+@login_required(login_url='/hts/login/')
+def search_stocks(request):
+    query = request.GET.get('q', '')
+    market = request.GET.get('market', '')
+    
+    stocks = Stock.objects.all()
+    
+    if query:
+        stocks = stocks.filter(name__icontains=query)
+    
+    if market:
+        stocks = stocks.filter(market=market)
+        
+    results = [
+        {'symbol': stock.symbol, 'name': stock.name, 'market': stock.market}
+        for stock in stocks
+    ]
+    
+    return JsonResponse({'results': results})

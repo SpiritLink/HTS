@@ -25,6 +25,21 @@
         .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 40px; font-size: 15px; }
         .btn-secondary { padding: 10px 20px; background-color: #fff; color: #495057; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+
+        /* 주식 검색 창 스타일 */
+        .search-section { background-color: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 40px; }
+        .search-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+        .search-input { flex-grow: 1; padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+        .search-input:focus, .search-select:focus { border-color: #004ea2; }
+        .btn-primary { padding: 10px 20px; background-color: #004ea2; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #003a79; }
+
+        #search-results-list { list-style-type: none; padding: 0; margin: 0; }
+        #search-results-list li { padding: 12px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; }
+        #search-results-list li:last-child { border-bottom: none; }
+        #search-results-list li:hover { background-color: #f8f9fa; }
+        .stock-market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -40,6 +55,32 @@
         <section class="summary-card">
             <span>💰 보유 투자금</span>
             <strong>{{ balance|floatformat:0 }} 원</strong>
+        </section>
+
+        <section class="search-section">
+            <h3>🔍 주식 검색</h3>
+            <div class="search-form">
+                <select id="market-select" class="search-select">
+                    <option value="">전체 시장</option>
+                    <option value="KR">한국 (KR)</option>
+                    <option value="US">미국 (US)</option>
+                    <option value="JP">일본 (JP)</option>
+                    {% for m in markets %}
+                        {% if m not in 'KR,US,JP' %}
+                        <option value="{{ m }}">{{ m }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <input type="text" id="stock-search-input" class="search-input" placeholder="주식 종목 이름 입력..." onkeydown="if(event.key === 'Enter') searchStocks()">
+                <button type="button" class="btn-primary" onclick="searchStocks()">검색</button>
+            </div>
+
+            <div id="search-results">
+                <ul id="search-results-list">
+                    <!-- 검색 결과가 여기에 표시됩니다. -->
+                </ul>
+                <div id="no-results-msg" class="empty-msg" style="display: none; padding: 20px;">검색 결과가 없습니다.</div>
+            </div>
         </section>
 
         <section>
@@ -66,5 +107,49 @@
             {% endif %}
         </section>
     </main>
+
+    <script>
+        function searchStocks() {
+            const query = document.getElementById('stock-search-input').value.trim();
+            const market = document.getElementById('market-select').value;
+            const resultsList = document.getElementById('search-results-list');
+            const noResultsMsg = document.getElementById('no-results-msg');
+
+            // 검색어가 비어있을 경우 초기화
+            if (!query && !market) {
+                resultsList.innerHTML = '';
+                noResultsMsg.style.display = 'none';
+                return;
+            }
+
+            fetch(`{% url 'hts:search_stocks' %}?q=${encodeURIComponent(query)}&market=${encodeURIComponent(market)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsList.innerHTML = '';
+
+                    if (data.results && data.results.length > 0) {
+                        noResultsMsg.style.display = 'none';
+                        data.results.forEach(stock => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                <div>
+                                    <span class="stock-market-badge">${stock.market}</span>
+                                    <strong>${stock.name}</strong>
+                                    <span style="color: #6c757d; font-size: 14px; margin-left: 5px;">(${stock.symbol})</span>
+                                </div>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="alert('${stock.name} 선택 기능 준비중입니다.')">선택</button>
+                            `;
+                            resultsList.appendChild(li);
+                        });
+                    } else {
+                        noResultsMsg.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching stock data:', error);
+                    alert('주식 검색 중 오류가 발생했습니다.');
+                });
+        }
+    </script>
 </body>
 </html>

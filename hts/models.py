@@ -14,11 +14,25 @@ class Order(models.Model):
     price = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+class Stock(models.Model):
+    """
+    개별 주식 종목의 기본 정보를 저장하는 모델.
+    주식 이름으로 검색할 수 있도록 별도 분리합니다.
+    """
+    symbol = models.CharField(max_length=20, unique=True, db_index=True)
+    name = models.CharField(max_length=100, db_index=True)
+    market = models.CharField(max_length=10, db_index=True, default='KR')
+    
+    def __str__(self):
+        return f"[{self.market}] {self.name} ({self.symbol})"
+
 class StockPrice(models.Model):
     """
     주가 정보를 저장하는 모델. 일 단위(Daily) 데이터를 기본으로 하지만,
     시간(시간, 분 등) 단위로 확장 가능하도록 DateTimeField를 사용합니다.
     """
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='prices', null=True, blank=True)
+
     # 주식 코드 (예: 'AAPL' - 미국, '005930' - 한국)
     symbol = models.CharField(max_length=20, db_index=True)
     
