@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>종목 전체 조회 - HTS</title>
+    <!-- Chart.js 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
@@ -17,7 +19,10 @@
         .table-krds.active { display: table; }
         .table-krds th, .table-krds td { padding: 16px; border-bottom: 1px solid #dee2e6; }
         .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
-        .table-krds tbody tr:hover { background-color: #f1f3f5; transition: background-color 0.2s; }
+
+        /* 테이블 행 클릭 스타일 적용 */
+        .table-krds tbody tr { cursor: pointer; transition: background-color 0.2s; }
+        .table-krds tbody tr:hover { background-color: #f1f3f5; }
 
         /* 순번 열 너비 조절 및 스타일 */
         .table-krds th:first-child, .table-krds td:first-child { width: 10%; color: #6c757d; font-weight: normal; }
@@ -31,6 +36,20 @@
         .pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 15px; display: none; }
         .pagination.active { display: flex; }
         .page-info { font-size: 14px; color: #495057; font-weight: bold; }
+
+        /* 모달 (차트 팝업) 스타일 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #fff; width: 90%; max-width: 800px; border-radius: 12px; padding: 30px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
+        .modal-close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #adb5bd; transition: color 0.2s; }
+        .modal-close-btn:hover { color: #343a40; }
+
+        .result-header { text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #e9ecef; }
+        .result-header h2 { margin: 0 0 10px 0; color: #004ea2; font-size: 28px; }
+        .result-header p { margin: 0; color: #555; font-size: 16px; }
+        .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; display: inline-block; vertical-align: middle; }
+
+        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -65,11 +84,32 @@
         </div>
     </div>
 
+    <!-- 주가 차트를 보여줄 모달(Modal) -->
+    <div id="chart-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+
+            <div class="result-header">
+                <span id="modal-market" class="market-badge" style="font-size: 14px; padding: 6px 12px; margin-bottom: 10px;"></span>
+                <h2 id="modal-name"></h2>
+                <p>종목 심볼: <strong id="modal-symbol"></strong></p>
+            </div>
+
+            <h3 style="font-size: 18px; margin-bottom: 10px; text-align: center;">최근 1달 주가 추이 (최고/최저가 변동)</h3>
+            <div id="chart-loader" class="loader">주가 데이터를 불러오는 중입니다...</div>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 전역 변수로 데이터와 페이징 상태 관리
         let allStocks = [];
         let currentPage = 1;
         const itemsPerPage = 10; // 한 페이지에 보여줄 항목 수
+
+        let priceChartInstance = null; // 차트 인스턴스
 
         document.addEventListener('DOMContentLoaded', function() {
             fetchData();
@@ -119,6 +159,10 @@
             // 데이터 행 생성
             currentData.forEach((stock, index) => {
                 const tr = document.createElement('tr');
+
+                // 클릭 시 모달 열기 이벤트 추가
+                tr.addEventListener('click', () => openModalAndFetchChart(stock));
+
                 // 전체 데이터 기준 순번 계산: (startIndex + 현재배열인덱스 + 1)
                 const serialNumber = startIndex + index + 1;
 
@@ -150,6 +194,164 @@
         function changePage(delta) {
             currentPage += delta;
             renderTable();
+        }
+
+        // ---- 모달 및 차트 렌더링 로직 ---- //
+
+        function openModalAndFetchChart(stock) {
+            const modal = document.getElementById('chart-modal');
+            const chartLoader = document.getElementById('chart-loader');
+            const canvasElement = document.getElementById('priceChart');
+
+            // 모달 열기
+            modal.classList.add('active');
+
+            // 헤더 정보 세팅
+            document.getElementById('modal-market').textContent = stock.market;
+            document.getElementById('modal-name').textContent = stock.name;
+            document.getElementById('modal-symbol').textContent = stock.symbol;
+
+            if (priceChartInstance) {
+                priceChartInstance.destroy();
+            }
+
+            canvasElement.style.display = 'none';
+            chartLoader.style.display = 'block';
+            chartLoader.textContent = "주가 데이터를 불러오는 중입니다...";
+
+            // 날짜 계산 (최근 1달)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            const endIsoStr = endDate.toISOString();
+            const startIsoStr = startDate.toISOString();
+
+            // API 호출
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_time=${encodeURIComponent(startIsoStr)}&end_time=${encodeURIComponent(endIsoStr)}`)
+                .then(response => response.json())
+                .then(data => {
+                    chartLoader.style.display = 'none';
+                    canvasElement.style.display = 'block';
+
+                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                        const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        renderChart(sortedData, stock.name);
+                    } else {
+                        renderChart([], stock.name);
+                        chartLoader.style.display = 'block';
+                        chartLoader.textContent = "최근 1달간의 주가 데이터가 없습니다.";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching price data:', error);
+                    chartLoader.style.display = 'block';
+                    chartLoader.textContent = "주가 데이터를 불러오는 중 오류가 발생했습니다.";
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('chart-modal').classList.remove('active');
+        }
+
+        // 모달 바깥 영역 클릭 시 닫기
+        document.getElementById('chart-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        function renderChart(priceData, stockName) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+
+            const labels = priceData.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            });
+
+            // 빨간색(상승), 파란색(하락)
+            const colors = priceData.map(item => {
+                return item.close_price >= item.open_price ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
+            });
+
+            // Floating Bar Chart [최저가, 최고가]
+            const barData = priceData.map(item => {
+                const low = item.low_price !== null ? item.low_price : item.close_price;
+                const high = item.high_price !== null ? item.high_price : item.close_price;
+                return [low, high];
+            });
+
+            // 종가 연결 선
+            const closePrices = priceData.map(item => item.close_price);
+
+            priceChartInstance = new Chart(ctx, {
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: '최저가 ~ 최고가',
+                            data: barData,
+                            backgroundColor: colors,
+                            borderColor: colors,
+                            borderWidth: 1,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        },
+                        {
+                            type: 'line',
+                            label: '종가 (Close Price)',
+                            data: closePrices,
+                            borderColor: '#343a40',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#343a40',
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        const low = context.raw[0].toLocaleString();
+                                        const high = context.raw[1].toLocaleString();
+                                        return `변동 범위: ${low}원 ~ ${high}원`;
+                                    }
+                                    return `종가: ${context.raw.toLocaleString()}원`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>
