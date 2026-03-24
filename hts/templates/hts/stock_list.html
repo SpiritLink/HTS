@@ -2,54 +2,66 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>종목 전체 조회 - HTS</title>
     <!-- Chart.js 라이브러리 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
-        h1 { margin-top: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px 10px; }
+        .container { width: 100%; max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; overflow: hidden; }
+        h1 { margin-top: 0; font-size: 22px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
 
-        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 8px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 6px 12px; border-radius: 6px; font-size: 13px; text-decoration: none; transition: all 0.2s; cursor: pointer; white-space: nowrap; }
         .btn-secondary:hover:not(:disabled) { background-color: #f1f3f5; color: #111; }
         .btn-secondary:disabled { background-color: #e9ecef; color: #adb5bd; cursor: not-allowed; border-color: #dee2e6; }
 
-        .table-krds { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; display: none; }
+        /* 테이블 래퍼 (가로 스크롤 허용) */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 20px; }
+
+        .table-krds { width: 100%; min-width: 400px; border-collapse: collapse; text-align: center; display: none; }
         .table-krds.active { display: table; }
-        .table-krds th, .table-krds td { padding: 16px; border-bottom: 1px solid #dee2e6; }
-        .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
+        .table-krds th, .table-krds td { padding: 12px 8px; border-bottom: 1px solid #dee2e6; font-size: 14px; word-break: keep-all; }
+        .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
 
         /* 테이블 행 클릭 스타일 적용 */
         .table-krds tbody tr { cursor: pointer; transition: background-color 0.2s; }
         .table-krds tbody tr:hover { background-color: #f1f3f5; }
 
-        /* 순번 열 너비 조절 및 스타일 */
-        .table-krds th:first-child, .table-krds td:first-child { width: 10%; color: #6c757d; font-weight: normal; }
-        /* 심볼 열 스타일 (기존 첫번째 열 스타일 이동) */
+        /* 열 너비 조절 및 스타일 */
+        .table-krds th:first-child, .table-krds td:first-child { width: 15%; color: #6c757d; font-weight: normal; }
         .table-krds td:nth-child(2) { font-weight: 600; color: #111; }
+        .table-krds td:nth-child(3) { text-align: left; } /* 종목명은 좌측 정렬이 모바일에서 읽기 편함 */
 
-        .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; display: none; }
-        .loader { text-align: center; padding: 40px; color: #666; }
+        .empty-msg { text-align: center; padding: 40px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; display: none; font-size: 14px; }
+        .loader { text-align: center; padding: 30px; color: #666; font-size: 14px; }
 
         /* Pagination 스타일 */
-        .pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 15px; display: none; }
+        .pagination { display: flex; justify-content: center; align-items: center; margin-top: 25px; gap: 10px; display: none; }
         .pagination.active { display: flex; }
         .page-info { font-size: 14px; color: #495057; font-weight: bold; }
 
         /* 모달 (차트 팝업) 스타일 */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: #fff; width: 90%; max-width: 800px; border-radius: 12px; padding: 30px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
-        .modal-close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #adb5bd; transition: color 0.2s; }
-        .modal-close-btn:hover { color: #343a40; }
+        .modal-content { background: #fff; width: 100%; max-width: 800px; max-height: 90vh; border-radius: 12px; padding: 20px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
+        .modal-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; color: #6c757d; transition: color 0.2s; padding: 0; }
+        .modal-close-btn:hover { color: #111; }
 
-        .result-header { text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #e9ecef; }
-        .result-header h2 { margin: 0 0 10px 0; color: #004ea2; font-size: 28px; }
-        .result-header p { margin: 0; color: #555; font-size: 16px; }
-        .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; display: inline-block; vertical-align: middle; }
+        .result-header { text-align: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e9ecef; margin-top: 10px; }
+        .result-header h2 { margin: 0 0 8px 0; color: #004ea2; font-size: 22px; word-break: keep-all; }
+        .result-header p { margin: 0; color: #555; font-size: 14px; }
+        .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 8px; display: inline-block; vertical-align: middle; }
 
-        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 20px; }
+        .chart-container { position: relative; flex-grow: 1; min-height: 250px; width: 100%; margin-top: 10px; }
+
+        /* 미디어 쿼리 - 모바일 화면 대응 */
+        @media (max-width: 480px) {
+            h1 { font-size: 18px; }
+            .btn-secondary { font-size: 12px; padding: 5px 10px; }
+            .table-krds th, .table-krds td { font-size: 13px; padding: 10px 5px; }
+            .market-badge { font-size: 10px; padding: 2px 6px; }
+            .result-header h2 { font-size: 18px; }
+        }
     </style>
 </head>
 <body>
@@ -61,18 +73,21 @@
 
         <div id="loader" class="loader">데이터를 불러오는 중입니다...</div>
 
-        <table id="stocks-table" class="table-krds">
-            <thead>
-                <tr>
-                    <th>순번</th>
-                    <th>심볼 (Symbol)</th>
-                    <th>종목명 (Name)</th>
-                    <th>시장 (Market)</th>
-                </tr>
-            </thead>
-            <tbody id="stocks-tbody">
-            </tbody>
-        </table>
+        <!-- 모바일 가로 스크롤을 위한 래퍼 추가 -->
+        <div class="table-responsive">
+            <table id="stocks-table" class="table-krds">
+                <thead>
+                    <tr>
+                        <th>순번</th>
+                        <th>심볼 (Symbol)</th>
+                        <th>종목명 (Name)</th>
+                        <th>시장 (Market)</th>
+                    </tr>
+                </thead>
+                <tbody id="stocks-tbody">
+                </tbody>
+            </table>
+        </div>
 
         <div id="empty-msg" class="empty-msg">등록된 주식 종목이 없습니다.</div>
 
@@ -90,12 +105,12 @@
             <button class="modal-close-btn" onclick="closeModal()">&times;</button>
 
             <div class="result-header">
-                <span id="modal-market" class="market-badge" style="font-size: 14px; padding: 6px 12px; margin-bottom: 10px;"></span>
+                <span id="modal-market" class="market-badge"></span>
                 <h2 id="modal-name"></h2>
                 <p>종목 심볼: <strong id="modal-symbol"></strong></p>
             </div>
 
-            <h3 style="font-size: 18px; margin-bottom: 10px; text-align: center;">최근 1달 주가 추이 (최고/최저가 변동)</h3>
+            <h3 style="font-size: 15px; margin-bottom: 10px; text-align: center; color: #333;">최근 1달 주가 추이</h3>
             <div id="chart-loader" class="loader">주가 데이터를 불러오는 중입니다...</div>
             <div class="chart-container">
                 <canvas id="priceChart"></canvas>
@@ -170,7 +185,7 @@
                     <td>${serialNumber}</td>
                     <td>${stock.symbol}</td>
                     <td>${stock.name}</td>
-                    <td><span style="background-color: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${stock.market}</span></td>
+                    <td><span style="background-color: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;">${stock.market}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -205,6 +220,9 @@
 
             // 모달 열기
             modal.classList.add('active');
+
+            // 모달이 열릴 때 body 스크롤 방지 (모바일 사용성 개선)
+            document.body.style.overflow = 'hidden';
 
             // 헤더 정보 세팅
             document.getElementById('modal-market').textContent = stock.market;
@@ -252,6 +270,8 @@
 
         function closeModal() {
             document.getElementById('chart-modal').classList.remove('active');
+            // 모달 닫힐 때 body 스크롤 복구
+            document.body.style.overflow = '';
         }
 
         // 모달 바깥 영역 클릭 시 닫기
@@ -304,7 +324,7 @@
                             data: closePrices,
                             borderColor: '#343a40',
                             borderWidth: 2,
-                            pointRadius: 3,
+                            pointRadius: 2, // 모바일에서 점 크기 약간 축소
                             pointBackgroundColor: '#fff',
                             pointBorderColor: '#343a40',
                             fill: false,
@@ -322,7 +342,11 @@
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11 }
+                            }
                         },
                         tooltip: {
                             callbacks: {
@@ -330,7 +354,7 @@
                                     if (context.datasetIndex === 0) {
                                         const low = context.raw[0].toLocaleString();
                                         const high = context.raw[1].toLocaleString();
-                                        return `변동 범위: ${low}원 ~ ${high}원`;
+                                        return `범위: ${low} ~ ${high}원`; // 모바일 대응 텍스트 축소
                                     }
                                     return `종가: ${context.raw.toLocaleString()}원`;
                                 }
@@ -339,11 +363,13 @@
                     },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, maxTicksLimit: 8 } // 모바일에서 x축 라벨 겹침 방지
                         },
                         y: {
                             beginAtZero: false,
                             ticks: {
+                                font: { size: 10 },
                                 callback: function(value) {
                                     return value.toLocaleString();
                                 }
