@@ -161,3 +161,43 @@ class StockSymbolPriceRangeAPIView(APIView):
             "message": f"Stock prices for {symbol} retrieved successfully",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
+
+class BulkStockPriceCreateAPIView(APIView):
+    def post(self, request):
+        """
+        6. 여러 주식의 가격 정보를 동시에 등록할 수 있는 POST API
+        요청 본문(Body)으로 주식 가격 데이터의 리스트(배열)를 받아 한 번에 저장합니다.
+        """
+        # 요청 데이터가 리스트(배열)인지 확인
+        if not isinstance(request.data, list):
+            return Response({
+                "status": "error",
+                "message": "Expected a list of objects but got a single object or invalid format."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # many=True 옵션을 주어 여러 개의 데이터를 동시에 시리얼라이즈
+        serializer = StockPriceSerializer(data=request.data, many=True)
+        
+        if serializer.is_valid():
+            try:
+                # 유효한 데이터들을 DB에 일괄 저장
+                serializer.save()
+                return Response({
+                    "status": "success",
+                    "message": f"Successfully created {len(serializer.data)} stock price records.",
+                    "data": serializer.data
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                 # DB 저장 중 오류 (예: Unique 제약 조건 위반 등) 발생 시 처리
+                 return Response({
+                    "status": "error",
+                    "message": "An error occurred while saving the data. Please check for duplicate records (symbol, market, timestamp).",
+                    "details": str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+                 
+        return Response({
+            "status": "error",
+            "message": "Invalid data format or missing required fields.",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

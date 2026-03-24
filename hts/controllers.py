@@ -97,3 +97,6 @@ def stock_list_view(request):
 
 def stock_search_page_view(request):
     return render(request, 'hts/stock_search.html')
+
+def dev_guide_view(request):
+    return render(request, 'hts/dev_guide.html')

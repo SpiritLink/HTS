@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개발자 가이드 - HTS API 명세서</title>
+    <style>
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        h1 { margin-top: 0; font-size: 32px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        h2 { font-size: 24px; color: #004ea2; margin-top: 40px; margin-bottom: 15px; border-bottom: 1px solid #e9ecef; padding-bottom: 10px; }
+        h3 { font-size: 18px; color: #333; margin-top: 25px; margin-bottom: 10px; }
+        p { margin-bottom: 15px; color: #555; }
+
+        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 8px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+
+        .endpoint { display: inline-block; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 16px; font-weight: bold; color: #d63384; margin-bottom: 15px; }
+        .method { color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 14px; margin-right: 8px; }
+        .method.get { background-color: #0d6efd; }
+        .method.post { background-color: #198754; }
+
+        pre { background-color: #272822; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+        code { font-family: 'Consolas', 'Courier New', monospace; }
+
+        .param-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .param-table th, .param-table td { padding: 10px; border: 1px solid #dee2e6; text-align: left; }
+        .param-table th { background-color: #f8f9fa; font-weight: bold; width: 20%; }
+
+        .note { background-color: #e2e3e5; padding: 15px; border-left: 4px solid #6c757d; border-radius: 4px; margin-bottom: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>개발자 가이드 (API 명세서)</span>
+            <a href="{% url 'hts:index' %}" class="btn-secondary">메인으로 돌아가기</a>
+        </h1>
+
+        <p>HTS 시스템 연동을 위한 RESTful API 명세서 및 Postman 테스트 예제입니다. 기본 도메인은 <code>http://spiritlink.uk</code> (또는 로컬 <code>http://127.0.0.1:8000</code>)을 사용합니다.</p>
+
+        <div class="note">
+            <strong>공통 응답 포맷:</strong> 모든 API는 일관된 JSON 구조(<code>status</code>, <code>message</code>, <code>data</code>/<code>errors</code>)를 반환합니다.
+        </div>
+
+        <!-- 1. 주식 종목 조회 -->
+        <h2>1. 주식 종목 전체 조회</h2>
+        <div class="endpoint"><span class="method get">GET</span> /api/stocks/</div>
+        <p>시스템에 등록된 모든 주식 종목의 정보를 조회합니다.</p>
+
+        <h3>Postman 테스트 (응답 예시)</h3>
+        <pre><code>{
+    "status": "success",
+    "message": "Stock list retrieved successfully",
+    "data": [
+        {
+            "id": 1,
+            "symbol": "005930",
+            "name": "삼성전자",
+            "market": "KR"
+        }
+    ]
+}</code></pre>
+
+        <!-- 2. 주식 종목 추가 -->
+        <h2>2. 주식 종목 추가 (단건/다건)</h2>
+        <div class="endpoint"><span class="method post">POST</span> /api/stocks/</div>
+        <p>새로운 주식 종목을 등록합니다. 배열을 전달하여 한 번에 여러 종목을 등록(Bulk Create)할 수도 있습니다.</p>
+
+        <h3>Postman Request Body (JSON raw)</h3>
+        <pre><code>[
+    {
+        "symbol": "005930",
+        "name": "삼성전자",
+        "market": "KR"
+    },
+    {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "market": "US"
+    }
+]</code></pre>
+
+        <!-- 3. 단일 종목 특정 기간 가격 조회 -->
+        <h2>3. 특정 종목의 기간별 주가 조회</h2>
+        <div class="endpoint"><span class="method get">GET</span> /api/prices/symbol/range/</div>
+        <p>특정 주식(symbol)의 지정된 시간 범위 내 가격 데이터를 조회합니다. (차트 그리기 용도로 주로 사용됨)</p>
+
+        <table class="param-table">
+            <tr>
+                <th>Query Parameter</th>
+                <th>설명 및 예시</th>
+            </tr>
+            <tr>
+                <td><code>symbol</code></td>
+                <td>조회할 종목 코드 (예: <code>005930</code>)</td>
+            </tr>
+            <tr>
+                <td><code>start_time</code></td>
+                <td>조회 시작 시간 (ISO 8601 포맷, 예: <code>2024-02-01T00:00:00Z</code>)</td>
+            </tr>
+            <tr>
+                <td><code>end_time</code></td>
+                <td>조회 종료 시간 (ISO 8601 포맷, 예: <code>2024-03-01T23:59:59Z</code>)</td>
+            </tr>
+        </table>
+
+        <h3>Postman 테스트 (URL 예시)</h3>
+        <pre><code>http://spiritlink.uk/api/prices/symbol/range/?symbol=005930&start_time=2024-02-01T00:00:00Z&end_time=2024-03-01T23:59:59Z</code></pre>
+
+        <!-- 4. 여러 주식 가격 정보 일괄 등록 -->
+        <h2>4. 다수 주식 가격 정보 일괄 등록 (Bulk Create)</h2>
+        <div class="endpoint"><span class="method post">POST</span> /api/prices/bulk-create/</div>
+        <p>외부 크롤러/AI Agent가 수집한 방대한 양의 주가 데이터를 한 번의 요청으로 데이터베이스에 저장합니다.</p>
+
+        <h3>Postman Request Body (JSON raw)</h3>
+        <pre><code>[
+    {
+        "symbol": "005930",
+        "market": "KR",
+        "timestamp": "2024-03-01T09:00:00Z",
+        "open_price": 73000,
+        "high_price": 74000,
+        "low_price": 72500,
+        "close_price": 73500,
+        "volume": 15000000,
+        "stock": 1
+    },
+    {
+        "symbol": "AAPL",
+        "market": "US",
+        "timestamp": "2024-03-01T14:30:00Z",
+        "open_price": 170.5,
+        "high_price": 172.0,
+        "low_price": 169.5,
+        "close_price": 171.2,
+        "volume": 50000000,
+        "stock": 2
+    }
+]</code></pre>
+
+    </div>
+</body>
+</html>

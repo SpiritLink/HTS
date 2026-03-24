@@ -12,4 +12,6 @@ urlpatterns = [
     path('prices/single/', controllers.StockPriceSingleAPIView.as_view(), name='stock-price-single'),
     # 특정 심볼에 대한 기간별 주식 가격 범위를 가져오는 API
     path('prices/symbol/range/', controllers.StockSymbolPriceRangeAPIView.as_view(), name='stock-symbol-price-range'),
+    # 여러 주식의 가격 정보를 동시에 등록하는 API
+    path('prices/bulk-create/', controllers.BulkStockPriceCreateAPIView.as_view(), name='stock-price-bulk-create'),
 ]

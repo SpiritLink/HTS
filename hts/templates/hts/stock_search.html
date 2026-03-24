@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 이름 검색 - HTS</title>
+    <!-- Chart.js 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
@@ -23,10 +25,14 @@
         .autocomplete-list li:hover { background-color: #f8f9fa; }
 
         /* 선택된 결과 표시 영역 */
-        .result-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 30px; text-align: center; display: none; }
-        .result-card h2 { margin: 0 0 10px 0; color: #004ea2; font-size: 32px; }
-        .result-card p { margin: 0; color: #555; font-size: 18px; }
+        .result-card { background-color: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 30px; display: none; margin-top: 20px;}
+        .result-header { text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #e9ecef; }
+        .result-header h2 { margin: 0 0 10px 0; color: #004ea2; font-size: 32px; }
+        .result-header p { margin: 0; color: #555; font-size: 18px; }
         .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; display: inline-block; vertical-align: middle; }
+
+        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 20px; }
+        .loader { text-align: center; color: #666; font-size: 14px; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
@@ -42,7 +48,17 @@
         </div>
 
         <div id="result-card" class="result-card">
-            <!-- 검색 결과 상세 정보가 여기에 표시됩니다. -->
+            <div class="result-header">
+                <span id="result-market" class="market-badge" style="font-size: 16px; padding: 6px 12px; margin-bottom: 15px;"></span>
+                <h2 id="result-name"></h2>
+                <p>종목 심볼: <strong id="result-symbol"></strong></p>
+            </div>
+
+            <h3 style="font-size: 18px; margin-bottom: 10px;">최근 1달 주가 추이 (최고/최저가 변동)</h3>
+            <div id="chart-loader" class="loader">주가 데이터를 불러오는 중입니다...</div>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -50,8 +66,10 @@
         const searchInput = document.getElementById('search-input');
         const autocompleteList = document.getElementById('autocomplete-list');
         const resultCard = document.getElementById('result-card');
+        const chartLoader = document.getElementById('chart-loader');
 
         let debounceTimer;
+        let priceChartInstance = null; // 차트 인스턴스 저장용
 
         searchInput.addEventListener('input', function() {
             const query = this.value.trim();
@@ -99,17 +117,154 @@
             }, 300);
         });
 
-        // 검색 결과 카드 표시 함수
+        // 검색 결과 카드 표시 및 차트 데이터 로드 함수
         function showResult(stock) {
-            resultCard.innerHTML = `
-                <span class="market-badge" style="font-size: 16px; padding: 6px 12px; margin-bottom: 15px;">${stock.market}</span>
-                <h2>${stock.name}</h2>
-                <p>종목 심볼: <strong>${stock.symbol}</strong></p>
-                <div style="margin-top: 30px;">
-                    <button class="btn-secondary" onclick="alert('상세 정보 페이지는 준비 중입니다.');">상세 정보 보기</button>
-                </div>
-            `;
+            // 헤더 정보 업데이트
+            document.getElementById('result-market').textContent = stock.market;
+            document.getElementById('result-name').textContent = stock.name;
+            document.getElementById('result-symbol').textContent = stock.symbol;
+
             resultCard.style.display = 'block';
+
+            // 기존 차트가 있다면 파괴
+            if (priceChartInstance) {
+                priceChartInstance.destroy();
+            }
+
+            // 날짜 계산 (현재부터 1달 전)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            const endIsoStr = endDate.toISOString();
+            const startIsoStr = startDate.toISOString();
+
+            chartLoader.style.display = 'block';
+            document.getElementById('priceChart').style.display = 'none';
+
+            // api/prices/symbol/range/ 엔드포인트 호출
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_time=${encodeURIComponent(startIsoStr)}&end_time=${encodeURIComponent(endIsoStr)}`)
+                .then(response => response.json())
+                .then(data => {
+                    chartLoader.style.display = 'none';
+                    document.getElementById('priceChart').style.display = 'block';
+
+                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                        // 시간순으로 정렬 (오래된 날짜가 먼저 오도록)
+                        const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                        renderChart(sortedData, stock.name);
+                    } else {
+                        // 데이터가 없을 경우 빈 차트 렌더링
+                        renderChart([], stock.name);
+                        chartLoader.style.display = 'block';
+                        chartLoader.textContent = "최근 1달간의 주가 데이터가 없습니다.";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching price data:', error);
+                    chartLoader.style.display = 'block';
+                    chartLoader.textContent = "주가 데이터를 불러오는 중 오류가 발생했습니다.";
+                });
+        }
+
+        // Chart.js를 이용한 봉 차트(Bar Chart 모방) 렌더링 함수
+        function renderChart(priceData, stockName) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+
+            const labels = priceData.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getMonth() + 1}/${date.getDate()}`; // MM/DD 형식
+            });
+
+            // 한국 주식 시장 기준: 종가 >= 시가 이면 빨간색(상승), 종가 < 시가 이면 파란색(하락)
+            const colors = priceData.map(item => {
+                return item.close_price >= item.open_price ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
+            });
+
+            // Floating Bar Chart 데이터 포맷: [최저가, 최고가]
+            const barData = priceData.map(item => {
+                // high_price와 low_price가 없으면 close_price로 대체하여 에러 방지
+                const low = item.low_price !== null ? item.low_price : item.close_price;
+                const high = item.high_price !== null ? item.high_price : item.close_price;
+                return [low, high];
+            });
+
+            // 종가 데이터를 연결하는 선(Line) 추가 (추세 파악 용도)
+            const closePrices = priceData.map(item => item.close_price);
+
+            priceChartInstance = new Chart(ctx, {
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: '최저가 ~ 최고가',
+                            data: barData,
+                            backgroundColor: colors,
+                            borderColor: colors,
+                            borderWidth: 1,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        },
+                        {
+                            type: 'line',
+                            label: '종가 (Close Price)',
+                            data: closePrices,
+                            borderColor: '#343a40',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#343a40',
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    // Bar 차트 툴팁 (context.datasetIndex === 0)
+                                    if (context.datasetIndex === 0) {
+                                        const low = context.raw[0].toLocaleString();
+                                        const high = context.raw[1].toLocaleString();
+                                        return `변동 범위: ${low}원 ~ ${high}원`;
+                                    }
+                                    // Line 차트 툴팁 (context.datasetIndex === 1)
+                                    return `종가: ${context.raw.toLocaleString()}원`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // 입력창 밖을 클릭하면 자동완성 목록 숨기기

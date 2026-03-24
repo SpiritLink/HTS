@@ -13,4 +13,5 @@ urlpatterns = [
     path('info/', controllers.info_lookup_view, name='info_lookup'),
     path('info/list/', controllers.stock_list_view, name='stock_list'),
     path('info/search/', controllers.stock_search_page_view, name='stock_search_page'),
+    path('guide/', controllers.dev_guide_view, name='dev_guide'),
 ]
