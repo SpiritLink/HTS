@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주식 이름 검색 - HTS</title>
+    <style>
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        h1 { margin-top: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+
+        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 8px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+
+        .search-container { position: relative; margin-bottom: 40px; }
+        .search-input { width: 100%; padding: 16px; font-size: 18px; border: 2px solid #004ea2; border-radius: 8px; box-sizing: border-box; outline: none; }
+        .search-input:focus { box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.2); }
+
+        /* 자동완성 드롭다운 스타일 */
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; display: none; margin: 0; padding: 0; list-style-type: none; }
+        .autocomplete-list li { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f3f5; display: flex; align-items: center; }
+        .autocomplete-list li:last-child { border-bottom: none; }
+        .autocomplete-list li:hover { background-color: #f8f9fa; }
+
+        /* 선택된 결과 표시 영역 */
+        .result-card { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 30px; text-align: center; display: none; }
+        .result-card h2 { margin: 0 0 10px 0; color: #004ea2; font-size: 32px; }
+        .result-card p { margin: 0; color: #555; font-size: 18px; }
+        .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; display: inline-block; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>주식 이름으로 검색</span>
+            <a href="{% url 'hts:info_lookup' %}" class="btn-secondary">뒤로가기</a>
+        </h1>
+
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="종목명을 입력하세요 (예: 삼성전자)" autocomplete="off">
+            <ul id="autocomplete-list" class="autocomplete-list"></ul>
+        </div>
+
+        <div id="result-card" class="result-card">
+            <!-- 검색 결과 상세 정보가 여기에 표시됩니다. -->
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const autocompleteList = document.getElementById('autocomplete-list');
+        const resultCard = document.getElementById('result-card');
+
+        let debounceTimer;
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+
+            clearTimeout(debounceTimer);
+
+            if (!query) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            // 사용자가 입력을 멈추고 300ms 후에 API 요청 (Debouncing)
+            debounceTimer = setTimeout(() => {
+                fetch(`/hts/search_stocks/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        autocompleteList.innerHTML = '';
+
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(stock => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `
+                                    <span class="market-badge">${stock.market}</span>
+                                    <span><strong>${stock.name}</strong> (${stock.symbol})</span>
+                                `;
+
+                                // 리스트 아이템 클릭 시 이벤트
+                                li.addEventListener('click', function() {
+                                    searchInput.value = stock.name;
+                                    autocompleteList.style.display = 'none';
+                                    showResult(stock);
+                                });
+
+                                autocompleteList.appendChild(li);
+                            });
+                            autocompleteList.style.display = 'block';
+                        } else {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<span style="color: #777;">검색 결과가 없습니다.</span>';
+                            autocompleteList.appendChild(li);
+                            autocompleteList.style.display = 'block';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching search results:', error));
+            }, 300);
+        });
+
+        // 검색 결과 카드 표시 함수
+        function showResult(stock) {
+            resultCard.innerHTML = `
+                <span class="market-badge" style="font-size: 16px; padding: 6px 12px; margin-bottom: 15px;">${stock.market}</span>
+                <h2>${stock.name}</h2>
+                <p>종목 심볼: <strong>${stock.symbol}</strong></p>
+                <div style="margin-top: 30px;">
+                    <button class="btn-secondary" onclick="alert('상세 정보 페이지는 준비 중입니다.');">상세 정보 보기</button>
+                </div>
+            `;
+            resultCard.style.display = 'block';
+        }
+
+        // 입력창 밖을 클릭하면 자동완성 목록 숨기기
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput && e.target !== autocompleteList) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

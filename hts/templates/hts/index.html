@@ -21,6 +21,9 @@
 
         .btn-outline { background-color: #fff; color: #004ea2; border: 1px solid #004ea2; }
         .btn-outline:hover { background-color: #f1f6fa; }
+
+        .btn-info { background-color: #28a745; color: #fff; border: 1px solid #28a745; }
+        .btn-info:hover { background-color: #218838; border-color: #1e7e34; }
     </style>
 </head>
 <body>
@@ -31,6 +34,7 @@
         <div class="btn-group">
             <a href="{% url 'hts:login' %}" class="btn btn-primary">로그인 화면으로 이동</a>
             <a href="{% url 'hts:register' %}" class="btn btn-outline">새 계정 만들기 (회원가입)</a>
+            <a href="{% url 'hts:info_lookup' %}" class="btn btn-info">정보조회</a>
             <a href="/admin/" class="btn btn-outline">시스템 관리자(Admin) 페이지</a>
         </div>
     </main>

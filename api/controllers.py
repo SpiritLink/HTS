@@ -22,22 +22,33 @@ class StockAPIView(APIView):
     def post(self, request):
         """
         2. 주식 정보를 추가할 수 있는 POST API
-        새로운 주식 종목을 등록합니다.
+        단일 종목 또는 여러 종목(리스트)을 한 번에 등록합니다.
         """
-        serializer = StockSerializer(data=request.data)
+        is_many = isinstance(request.data, list)
+        serializer = StockSerializer(data=request.data, many=is_many)
+        
         if serializer.is_valid():
             # 중복 체크
-            symbol = serializer.validated_data.get('symbol')
-            if Stock.objects.filter(symbol=symbol).exists():
-                return Response({
-                    "status": "error", 
-                    "message": "Stock already exists"
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if is_many:
+                symbols = [item.get('symbol') for item in serializer.validated_data if item.get('symbol')]
+                existing_stocks = Stock.objects.filter(symbol__in=symbols).values_list('symbol', flat=True)
+                if existing_stocks:
+                    return Response({
+                        "status": "error", 
+                        "message": f"Some stocks already exist: {', '.join(existing_stocks)}"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                symbol = serializer.validated_data.get('symbol')
+                if Stock.objects.filter(symbol=symbol).exists():
+                    return Response({
+                        "status": "error", 
+                        "message": "Stock already exists"
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
             serializer.save()
             return Response({
                 "status": "success",
-                "message": "Stock added successfully",
+                "message": "Stocks added successfully" if is_many else "Stock added successfully",
                 "data": serializer.data
             }, status=status.HTTP_201_CREATED)
             

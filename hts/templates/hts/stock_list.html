@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>종목 전체 조회 - HTS</title>
+    <style>
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        h1 { margin-top: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+
+        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 8px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+
+        .table-krds { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; display: none; }
+        .table-krds.active { display: table; }
+        .table-krds th, .table-krds td { padding: 16px; border-bottom: 1px solid #dee2e6; }
+        .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
+        .table-krds tbody tr:hover { background-color: #f1f3f5; transition: background-color 0.2s; }
+        .table-krds td:first-child { font-weight: 600; color: #111; }
+
+        .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; display: none; }
+        .loader { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>종목 전체 목록</span>
+            <a href="{% url 'hts:info_lookup' %}" class="btn-secondary">뒤로가기</a>
+        </h1>
+
+        <div id="loader" class="loader">데이터를 불러오는 중입니다...</div>
+
+        <table id="stocks-table" class="table-krds">
+            <thead>
+                <tr>
+                    <th>심볼 (Symbol)</th>
+                    <th>종목명 (Name)</th>
+                    <th>시장 (Market)</th>
+                </tr>
+            </thead>
+            <tbody id="stocks-tbody">
+            </tbody>
+        </table>
+
+        <div id="empty-msg" class="empty-msg">등록된 주식 종목이 없습니다.</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('stocks-table');
+            const tbody = document.getElementById('stocks-tbody');
+            const emptyMsg = document.getElementById('empty-msg');
+            const loader = document.getElementById('loader');
+
+            fetch('/api/stocks/')
+                .then(response => response.json())
+                .then(data => {
+                    loader.style.display = 'none';
+                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                        data.data.forEach(stock => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${stock.symbol}</td>
+                                <td>${stock.name}</td>
+                                <td><span style="background-color: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${stock.market}</span></td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                        table.classList.add('active');
+                    } else {
+                        emptyMsg.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loader.innerHTML = '데이터를 불러오는 중 오류가 발생했습니다.';
+                });
+        });
+    </script>
+</body>
+</html>

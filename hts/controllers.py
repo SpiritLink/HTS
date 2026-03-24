@@ -69,7 +69,7 @@ def dashboard(request):
     # 2. Service로부터 받은 결과를 Template(화면)으로 전달
     return render(request, 'hts/dashboard.html', portfolio_data)
 
-@login_required(login_url='/hts/login/')
+# @login_required 데코레이터 제거 (비로그인 상태에서도 검색 가능하도록 수정)
 def search_stocks(request):
     query = request.GET.get('q', '')
     market = request.GET.get('market', '')
@@ -88,3 +88,12 @@ def search_stocks(request):
     ]
     
     return JsonResponse({'results': results})
+
+def info_lookup_view(request):
+    return render(request, 'hts/info_lookup.html')
+
+def stock_list_view(request):
+    return render(request, 'hts/stock_list.html')
+
+def stock_search_page_view(request):
+    return render(request, 'hts/stock_search.html')
