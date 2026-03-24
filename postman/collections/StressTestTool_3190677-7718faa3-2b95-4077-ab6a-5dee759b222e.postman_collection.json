@@ -1,0 +1,120 @@
+{
+  "info": {
+    "_postman_id": "7718faa3-2b95-4077-ab6a-5dee759b222e",
+    "name": "StressTestTool",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "127.0.0.1:5030/MemberManage/rent/10",
+      "id": "0732e078-b2db-402f-9ae0-3a153dba01b9",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "127.0.0.1:5030/MemberManage/rent/10",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5030",
+          "path": [
+            "MemberManage",
+            "rent",
+            "10"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "add member",
+      "id": "cbec5426-6d4d-4bb2-b195-a9de4d5a88a5",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "127.0.0.1:5030/MemberManage/Users/Add/10/test/memberId",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5030",
+          "path": [
+            "MemberManage",
+            "Users",
+            "Add",
+            "10",
+            "test",
+            "memberId"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Guild Add",
+      "id": "002bd1e2-8297-4a68-bac7-74c15d16ff96",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "127.0.0.1:5030/Guild/Add/1/Hello",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5030",
+          "path": [
+            "Guild",
+            "Add",
+            "1",
+            "Hello"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Guild Get",
+      "id": "bf48e10e-38d8-4c68-aaf0-35205deb15ab",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "127.0.0.1:5030/Guild/Get",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5030",
+          "path": [
+            "Guild",
+            "Get"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

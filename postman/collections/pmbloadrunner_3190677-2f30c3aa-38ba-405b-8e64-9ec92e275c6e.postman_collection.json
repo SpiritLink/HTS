@@ -1,0 +1,39 @@
+{
+  "info": {
+    "_postman_id": "2f30c3aa-38ba-405b-8e64-9ec92e275c6e",
+    "name": "pmbloadrunner",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "mq",
+      "id": "d9d1e3ff-fa54-4204-b7a4-bed02551dfeb",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "firehose/count",
+      "id": "5b135589-f440-41c5-a3b3-181e8b9b0bde",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    }
+  ]
+}
