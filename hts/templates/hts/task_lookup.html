@@ -5,106 +5,50 @@
 {% block head_extra %}{% csrf_token %}{% endblock %}
 
 {% block extra_css %}
-        /* Redis 큐 상태 패널 */
-        .redis-panel {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            color: white;
-            text-align: left;
-        }
-        .redis-panel h2 {
-            margin: 0 0 20px 0;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .redis-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .redis-stat {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-        .redis-stat:hover {
-            transform: translateY(-3px);
-            background: rgba(255,255,255,0.25);
-        }
-        .redis-stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .redis-stat-label {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-        .redis-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 15px;
-        }
-        /* btn-refresh 스타일은 base.html에서 상속 */
-
         /* 자동 새로고침 버튼 스타일 오버라이드 */
         .btn-auto {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+            color: white !important;
         }
         .btn-auto:hover {
             box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
         }
         .btn-stop {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
         }
         .btn-stop:hover {
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
         }
 
-        .last-updated {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-top: 10px;
+        /* 가격 조회 큐 패널 (눈에 편한 복숭아/주황색 계열) */
+        .menu-panel.queue-panel {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%) !important;
+            color: #333;
         }
-        .connection-error {
-            background: rgba(220, 53, 69, 0.3);
-            border: 1px solid rgba(220, 53, 69, 0.5);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-
-        /* 가격 조회 큐 패널 (볍황색 계열) */
-        .queue-panel {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+        .menu-panel.queue-panel h2,
+        .menu-panel.queue-panel p {
+            color: #333;
         }
         .btn-queue {
             background: rgba(255,255,255,0.95);
-            color: #f5576c;
+            color: #e85d75;
         }
         .btn-queue:hover {
             background: white;
         }
 
-        /* 작업 등록 패널 (초록색 계열) */
-        .register-panel {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
+        /* 작업 등록 패널 (눈에 편한 파란색 계열) */
+        .menu-panel.register-panel {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%) !important;
+            color: #333;
+        }
+        .menu-panel.register-panel h2,
+        .menu-panel.register-panel p {
+            color: #333;
         }
         .btn-register {
             background: rgba(255,255,255,0.95);
-            color: #11998e;
+            color: #4a90e2;
         }
         .btn-register:hover {
             background: white;
@@ -170,7 +114,7 @@
         <div class="redis-panel">
             <h2>
                 📦 Redis 큐 실시간 상태
-                <span id="connection-status" style="font-size: 12px; margin-left: auto; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px;">연결 확인 중...</span>
+                <span id="connection-status" class="connection-status">연결 확인 중...</span>
             </h2>
             <div class="redis-grid">
                 <div class="redis-stat">
@@ -205,7 +149,37 @@
             <div id="error-message" class="connection-error" style="display: none;"></div>
         </div>
 
-        <!-- 2. 가격 조회 큐 상세 조회 -->
+        <!-- 2. 작업 큐 상태 요약 (눈에 편한 초록색 계열) -->
+        <div class="summary-panel">
+            <h2>
+                📊 작업 큐 상태 요약
+                <span id="queue-summary-status" class="connection-status">조회 중...</span>
+            </h2>
+            <div class="summary-grid">
+                <div class="summary-stat">
+                    <div id="summary-total" class="summary-stat-value total">-</div>
+                    <div class="summary-stat-label">총 요청</div>
+                </div>
+                <div class="summary-stat">
+                    <div id="summary-pending" class="summary-stat-value pending">-</div>
+                    <div class="summary-stat-label">대기중</div>
+                </div>
+                <div class="summary-stat">
+                    <div id="summary-processing" class="summary-stat-value processing">-</div>
+                    <div class="summary-stat-label">처리중</div>
+                </div>
+                <div class="summary-stat">
+                    <div id="summary-completed" class="summary-stat-value completed">-</div>
+                    <div class="summary-stat-label">완료</div>
+                </div>
+                <div class="summary-stat">
+                    <div id="summary-failed" class="summary-stat-value failed">-</div>
+                    <div class="summary-stat-label">실패</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 가격 조회 큐 상세 조회 (눈에 편한 복숭아/주황색 계열) -->
         <div class="menu-panel queue-panel">
             <h2>📋 가격 조회 큐 상세 조회</h2>
             <p>Yahoo Finance에서 주가 데이터를 가져오기 위한 요청 큐의 상세 내역을 확인하고 관리할 수 있습니다. 요청의 상태(PENDING, PROCESSING, COMPLETED, FAILED)를 확인하고 필요한 작업을 재시도하거나 처리할 수 있습니다.</p>
@@ -253,20 +227,27 @@
             btn.textContent = '🔄 불러오는 중...';
 
             try {
-                const response = await fetch('{% url "hts:celery_status" %}', {
-                    method: 'GET',
-                    headers: {
-                        'X-CSRFToken': CSRF_TOKEN
-                    }
-                });
+                // Redis 상태와 큐 요약 데이터를 병렬로 조회
+                const [redisResponse, summaryResponse] = await Promise.all([
+                    fetch('{% url "hts:celery_status" %}', {
+                        method: 'GET',
+                        headers: { 'X-CSRFToken': CSRF_TOKEN }
+                    }),
+                    fetch('/hts/api/queue-summary/', {
+                        method: 'GET',
+                        headers: { 'X-CSRFToken': CSRF_TOKEN }
+                    })
+                ]);
                 
-                const data = await response.json();
+                const redisData = await redisResponse.json();
+                const summaryData = await summaryResponse.json();
                 
-                if (data.success) {
-                    document.getElementById('queue-length').textContent = data.queue_length;
-                    document.getElementById('scheduled-count').textContent = data.scheduled_count;
-                    document.getElementById('pending-db').textContent = data.pending_db_count;
-                    document.getElementById('processing-db').textContent = data.processing_db_count;
+                // Redis 상태 업데이트
+                if (redisData.success) {
+                    document.getElementById('queue-length').textContent = redisData.queue_length;
+                    document.getElementById('scheduled-count').textContent = redisData.scheduled_count;
+                    document.getElementById('pending-db').textContent = redisData.pending_db_count;
+                    document.getElementById('processing-db').textContent = redisData.processing_db_count;
                     
                     statusBadge.textContent = '✅ 연결완료';
                     statusBadge.style.background = 'rgba(40, 167, 69, 0.5)';
@@ -275,12 +256,21 @@
                     document.getElementById('last-updated').textContent = 
                         '업데이트: ' + now.toLocaleTimeString('ko-KR');
                     document.getElementById('error-message').style.display = 'none';
-                } else {
-                    throw new Error(data.error || '알 수 없는 오류');
+                }
+                
+                // 큐 요약 데이터 업데이트
+                if (summaryData.success) {
+                    document.getElementById('summary-total').textContent = summaryData.total_count;
+                    document.getElementById('summary-pending').textContent = summaryData.pending_count;
+                    document.getElementById('summary-processing').textContent = summaryData.processing_count;
+                    document.getElementById('summary-completed').textContent = summaryData.completed_count;
+                    document.getElementById('summary-failed').textContent = summaryData.failed_count;
+                    document.getElementById('queue-summary-status').textContent = '✅ 최신';
                 }
             } catch (error) {
                 statusBadge.textContent = '❌ 연결 실패';
-                statusBadge.style.background = 'rgba(220, 53, 69, 0.5)';
+                statusBadge.style.background = 'rgba(255,255,255,0.3)';
+                document.getElementById('queue-summary-status').textContent = '❌ 오류';
                 
                 const errorDiv = document.getElementById('error-message');
                 errorDiv.textContent = '오류: ' + error.message;

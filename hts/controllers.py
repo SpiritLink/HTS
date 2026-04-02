@@ -277,6 +277,27 @@ def celery_queue_status(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+def queue_summary_api(request):
+    """작업 큐 요약 정보 API (task_queue_list와 동일한 데이터)"""
+    try:
+        total_count = DataFetchRequest.objects.count()
+        pending_count = DataFetchRequest.objects.filter(status='PENDING').count()
+        processing_count = DataFetchRequest.objects.filter(status='PROCESSING').count()
+        completed_count = DataFetchRequest.objects.filter(status='COMPLETED').count()
+        failed_count = DataFetchRequest.objects.filter(status='FAILED').count()
+        
+        return JsonResponse({
+            'success': True,
+            'total_count': total_count,
+            'pending_count': pending_count,
+            'processing_count': processing_count,
+            'completed_count': completed_count,
+            'failed_count': failed_count
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
 def redis_cache_view(request):
     """Redis 캐시 조회 페이지"""
     return render(request, 'hts/redis_cache.html')
