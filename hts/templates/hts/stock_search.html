@@ -28,6 +28,13 @@
         .autocomplete-list li:last-child { border-bottom: none; }
         .autocomplete-list li:hover { background-color: #f8f9fa; }
 
+        /* 시장별 배지 스타일 */
+        .market-badge-kospi { background-color: #dc3545; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; }
+        .market-badge-kosdaq { background-color: #0066ff; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; }
+        .market-badge-nasdaq { background-color: #6f42c1; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; }
+        .market-badge-us { background-color: #6c757d; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; }
+        .market-badge-default { background-color: #e9ecef; color: #495057; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; }
+
         /* 날짜 선택 영역 스타일 */
         .date-filter-container {
             background-color: #f8f9fa;
@@ -167,6 +174,7 @@
         <!-- 선택된 종목 표시 -->
         <div id="selected-stock-info" class="selected-stock-info">
             <div>
+                <span id="selected-stock-market" class="market-badge-default" style="margin-right: 8px;"></span>
                 <span id="selected-stock-name" class="selected-stock-name"></span>
                 <span id="selected-stock-symbol" class="selected-stock-symbol"></span>
             </div>
@@ -201,7 +209,7 @@
 
         <div id="result-card" class="result-card">
             <div class="result-header">
-                <span id="result-market" class="market-badge"></span>
+                <span id="result-market"></span>
                 <h2 id="result-name"></h2>
                 <p>종목 심볼: <strong id="result-symbol"></strong></p>
             </div>
@@ -286,8 +294,28 @@
                         if (data.results && data.results.length > 0) {
                             data.results.forEach(stock => {
                                 const li = document.createElement('li');
+                                
+                                // 시장별 배지 클래스 선택
+                                let marketClass = 'market-badge-default';
+                                let marketName = stock.market;
+                                const marketUpper = stock.market.toUpperCase();
+                                
+                                if (marketUpper === 'KR' || marketUpper === 'KOSPI') {
+                                    marketClass = 'market-badge-kospi';
+                                    marketName = 'KOSPI';
+                                } else if (marketUpper === 'KQ' || marketUpper === 'KOSDAQ') {
+                                    marketClass = 'market-badge-kosdaq';
+                                    marketName = 'KOSDAQ';
+                                } else if (marketUpper === 'NASDAQ') {
+                                    marketClass = 'market-badge-nasdaq';
+                                    marketName = 'NASDAQ';
+                                } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
+                                    marketClass = 'market-badge-us';
+                                    marketName = marketUpper === 'US' ? 'US' : marketUpper;
+                                }
+                                
                                 li.innerHTML = `
-                                    <span class="market-badge">${stock.market}</span>
+                                    <span class="${marketClass}">${marketName}</span>
                                     <span><strong>${stock.name}</strong> <span style="color:#6c757d; font-size:12px;">(${stock.symbol})</span></span>
                                 `;
 
@@ -315,8 +343,30 @@
             searchInput.value = stock.name;
             autocompleteList.style.display = 'none';
 
+            // 시장별 배지 클래스 선택
+            let marketClass = 'market-badge-default';
+            let marketName = stock.market;
+            const marketUpper = stock.market.toUpperCase();
+            
+            if (marketUpper === 'KR' || marketUpper === 'KOSPI') {
+                marketClass = 'market-badge-kospi';
+                marketName = 'KOSPI';
+            } else if (marketUpper === 'KQ' || marketUpper === 'KOSDAQ') {
+                marketClass = 'market-badge-kosdaq';
+                marketName = 'KOSDAQ';
+            } else if (marketUpper === 'NASDAQ') {
+                marketClass = 'market-badge-nasdaq';
+                marketName = 'NASDAQ';
+            } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
+                marketClass = 'market-badge-us';
+                marketName = marketUpper === 'US' ? 'US' : marketUpper;
+            }
+
             // 검색창 숨기고 선택된 종목 표시
             searchContainer.style.display = 'none';
+            const marketBadge = document.getElementById('selected-stock-market');
+            marketBadge.className = marketClass;
+            marketBadge.textContent = marketName;
             document.getElementById('selected-stock-name').textContent = stock.name;
             document.getElementById('selected-stock-symbol').textContent = `(${stock.symbol})`;
             selectedStockInfo.classList.add('active');
@@ -358,7 +408,28 @@
 
         // 검색 결과 카드 표시 및 차트 데이터 로드
         function showResult(stock, startDateStr, endDateStr) {
-            document.getElementById('result-market').textContent = stock.market;
+            // 시장별 배지 클래스 선택
+            let marketClass = 'market-badge-default';
+            let marketName = stock.market;
+            const marketUpper = stock.market.toUpperCase();
+            
+            if (marketUpper === 'KR' || marketUpper === 'KOSPI') {
+                marketClass = 'market-badge-kospi';
+                marketName = 'KOSPI';
+            } else if (marketUpper === 'KQ' || marketUpper === 'KOSDAQ') {
+                marketClass = 'market-badge-kosdaq';
+                marketName = 'KOSDAQ';
+            } else if (marketUpper === 'NASDAQ') {
+                marketClass = 'market-badge-nasdaq';
+                marketName = 'NASDAQ';
+            } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
+                marketClass = 'market-badge-us';
+                marketName = marketUpper === 'US' ? 'US' : marketUpper;
+            }
+            
+            const resultMarket = document.getElementById('result-market');
+            resultMarket.className = marketClass;
+            resultMarket.textContent = marketName;
             document.getElementById('result-name').textContent = stock.name;
             document.getElementById('result-symbol').textContent = stock.symbol;
 

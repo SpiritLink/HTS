@@ -102,6 +102,13 @@
         /* 열 너비 조절 및 스타일 */
         .table-krds th:first-child, .table-krds td:first-child { width: 15%; color: #6c757d; font-weight: normal; }
         .table-krds td:nth-child(2) { font-weight: 600; color: #111; }
+
+        /* 시장별 배지 스타일 */
+        .market-badge-kospi { background-color: #dc3545; color: #fff; }
+        .market-badge-kosdaq { background-color: #0066ff; color: #fff; }
+        .market-badge-nasdaq { background-color: #6f42c1; color: #fff; }
+        .market-badge-us { background-color: #6c757d; color: #fff; }
+        .market-badge-default { background-color: #e9ecef; color: #495057; }
         .table-krds td:nth-child(3) { text-align: left; }
 
         .empty-msg { text-align: center; padding: 40px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; display: none; font-size: 14px; }
@@ -322,12 +329,31 @@
                 tr.addEventListener('click', () => openModalAndFetchChart(stock));
 
                 const serialNumber = startIndex + index + 1;
+                
+                // 시장별 배지 클래스 선택
+                let marketClass = 'market-badge-default';
+                let marketName = stock.market;
+                const marketUpper = stock.market.toUpperCase();
+                
+                if (marketUpper === 'KR' || marketUpper === 'KOSPI') {
+                    marketClass = 'market-badge-kospi';
+                    marketName = 'KOSPI';
+                } else if (marketUpper === 'KQ' || marketUpper === 'KOSDAQ') {
+                    marketClass = 'market-badge-kosdaq';
+                    marketName = 'KOSDAQ';
+                } else if (marketUpper === 'NASDAQ') {
+                    marketClass = 'market-badge-nasdaq';
+                    marketName = 'NASDAQ';
+                } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
+                    marketClass = 'market-badge-us';
+                    marketName = marketUpper === 'US' ? 'US' : marketUpper;
+                }
 
                 tr.innerHTML = `
                     <td>${serialNumber}</td>
                     <td>${stock.symbol}</td>
                     <td>${stock.name}</td>
-                    <td><span style="background-color: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;">${stock.market}</span></td>
+                    <td><span class="${marketClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;">${marketName}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
