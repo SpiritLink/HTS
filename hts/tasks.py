@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import DataFetchRequest, Stock, StockPrice, StockTradingCalendar
+from hts.services.cache_service import invalidate_price_cache
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +215,10 @@ def fetch_stock_data(self, request_id):
                     price_objects,
                     ignore_conflicts=True
                 )
+                
+                # 데이터 저장 후 Redis 캐시 무효화
+                deleted_count = invalidate_price_cache(symbol, interval)
+                logger.info(f"[CACHE INVALIDATED] {symbol}/{interval}: {deleted_count} cache entries deleted")
                 
                 # 캘린더 업데이트 - 데이터가 있는 날짜는 TRADING으로 표시 (오늘/미래 제외)
                 # 시간 단위 데이터도 일별로 캘린더 업데이트

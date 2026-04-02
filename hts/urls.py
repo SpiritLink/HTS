@@ -23,4 +23,8 @@ urlpatterns = [
     path('tasks/queue/process-pending/', controllers.process_all_pending, name='process_pending'),
     path('tasks/queue/clear-completed/', controllers.clear_completed_tasks, name='clear_completed'),
     path('tasks/queue/celery-status/', controllers.celery_queue_status, name='celery_status'),  # GET/POST 모두 허용
+    path('tasks/redis-cache/', controllers.redis_cache_view, name='redis_cache'),
+    path('tasks/redis-cache/api/list/', controllers.redis_cache_list_api, name='redis_cache_list'),
+    path('tasks/redis-cache/api/delete-selected/', controllers.redis_cache_delete_selected, name='redis_cache_delete_selected'),
+    path('tasks/redis-cache/api/delete-all/', controllers.redis_cache_delete_all, name='redis_cache_delete_all'),
 ]

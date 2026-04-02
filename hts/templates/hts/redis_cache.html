@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redis 캐시 조회 - HTS</title>
+    {% csrf_token %}
+    <style>
+        body { 
+            font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+            background-color: #f4f6f9; 
+            color: #333; 
+            margin: 0; 
+            padding: 40px 20px; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: #fff; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            box-sizing: border-box; 
+        }
+        h1 { 
+            margin-top: 0; 
+            font-size: 26px; 
+            color: #111; 
+            letter-spacing: -0.5px; 
+            border-bottom: 2px solid #111; 
+            padding-bottom: 20px; 
+            margin-bottom: 30px; 
+        }
+
+        /* 헤더 영역 */
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #111;
+            font-size: 18px;
+        }
+
+        /* 버튼 스타일 */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        /* 액션 버튼 영역 */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* 테이블 스타일 */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        tr.selected {
+            background: #e3f2fd;
+        }
+        
+        /* 체크박스 */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .empty-state-text {
+            font-size: 16px;
+        }
+
+        /* 로딩 상태 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 토스트 메시지 */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success {
+            background: #28a745;
+        }
+        .toast.error {
+            background: #dc3545;
+        }
+
+        /* 뒤로가기 링크 */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .back-link:hover {
+            color: #111;
+        }
+
+        /* 확인 다이얼로그 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .modal-text {
+            color: #6c757d;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* 크기 포맷 */
+        .size-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        /* TTL 포맷 */
+        .ttl-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #d4edda;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #155724;
+        }
+        .ttl-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'hts:task_lookup' %}" class="back-link">← 작업 조회 메뉴로 돌아가기</a>
+        
+        <h1>⚡ Redis 캐시 조회</h1>
+
+        <!-- 헤더 영역 -->
+        <div class="header-actions">
+            <div class="stats">
+                <div class="stat-item">
+                    <span>총 항목:</span>
+                    <span id="total-count" class="stat-value">-</span>
+                </div>
+                <div class="stat-item">
+                    <span>선택됨:</span>
+                    <span id="selected-count" class="stat-value">0</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="loadCacheList()">
+                🔄 새로고침
+            </button>
+        </div>
+
+        <!-- 액션 버튼 -->
+        <div class="action-bar">
+            <button class="btn btn-danger" onclick="deleteSelected()" id="btn-delete-selected" disabled>
+                🗑️ 선택 삭제
+            </button>
+            <button class="btn btn-warning" onclick="confirmDeleteAll()">
+                ⚠️ 전체 삭제
+            </button>
+            <button class="btn btn-secondary" onclick="toggleSelectAll()" id="btn-select-all">
+                ☑️ 전체 선택
+            </button>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-container">
+            <table id="cache-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll()">
+                            </div>
+                        </th>
+                        <th>종목 코드</th>
+                        <th>간격</th>
+                        <th>시작일</th>
+                        <th>종료일</th>
+                        <th>TTL (남은시간)</th>
+                        <th>크기</th>
+                    </tr>
+                </thead>
+                <tbody id="cache-table-body">
+                    <tr>
+                        <td colspan="7" class="loading">
+                            <div class="spinner"></div>
+                            <div>데이터를 불러오는 중...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 확인 모달 -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-title" id="modal-title">확인</div>
+            <div class="modal-text" id="modal-text">정말 삭제하시겠습니까?</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+                <button class="btn btn-danger" id="modal-confirm-btn">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let cacheItems = [];
+        let selectedKeys = new Set();
+
+        // 페이지 로드 시 데이터 조회
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCacheList();
+        });
+
+        // 캐시 목록 조회
+        async function loadCacheList() {
+            const tbody = document.getElementById('cache-table-body');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="loading">
+                        <div class="spinner"></div>
+                        <div>데이터를 불러오는 중...</div>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const response = await fetch('{% url "hts:redis_cache_list" %}');
+                const data = await response.json();
+
+                if (data.success) {
+                    cacheItems = data.items;
+                    renderTable(cacheItems);
+                    document.getElementById('total-count').textContent = data.count;
+                } else {
+                    throw new Error(data.error || '데이터 조회 실패');
+                }
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">❌</div>
+                            <div class="empty-state-text">데이터를 불러오는 중 오류가 발생했습니다.</div>
+                            <div style="font-size: 12px; margin-top: 10px; color: #999;">${error.message}</div>
+                        </td>
+                    </tr>
+                `;
+                showToast('데이터 조회 실패: ' + error.message, 'error');
+            }
+        }
+
+        // 테이블 렌더링
+        function renderTable(items) {
+            const tbody = document.getElementById('cache-table-body');
+            
+            if (items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <div class="empty-state-text">캐시된 데이터가 없습니다.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => {
+                const startDateFormatted = formatDate(item.start_date);
+                const endDateFormatted = formatDate(item.end_date);
+                const ttlFormatted = formatTTL(item.ttl);
+                const sizeFormatted = formatSize(item.size);
+                
+                return `
+                    <tr data-key="${item.key}" class="${selectedKeys.has(item.key) ? 'selected' : ''}">
+                        <td>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" 
+                                       value="${item.key}" 
+                                       ${selectedKeys.has(item.key) ? 'checked' : ''}
+                                       onchange="toggleSelection('${item.key}')">
+                            </div>
+                        </td>
+                        <td><strong>${item.symbol}</strong></td>
+                        <td>${item.interval}</td>
+                        <td>${startDateFormatted}</td>
+                        <td>${endDateFormatted}</td>
+                        <td><span class="ttl-badge ${item.ttl <= 0 ? 'ttl-expired' : ''}">${ttlFormatted}</span></td>
+                        <td><span class="size-badge">${sizeFormatted}</span></td>
+                    </tr>
+                `;
+            }).join('');
+
+            updateSelectedCount();
+        }
+
+        // 개별 선택 토글
+        function toggleSelection(key) {
+            if (selectedKeys.has(key)) {
+                selectedKeys.delete(key);
+            } else {
+                selectedKeys.add(key);
+            }
+            renderTable(cacheItems);
+            updateSelectAllCheckbox();
+        }
+
+        // 전체 선택 토글
+        function toggleSelectAll() {
+            const checkbox = document.getElementById('select-all-checkbox');
+            
+            if (selectedKeys.size === cacheItems.length && cacheItems.length > 0) {
+                // 전체 해제
+                selectedKeys.clear();
+                checkbox.checked = false;
+            } else {
+                // 전체 선택
+                selectedKeys = new Set(cacheItems.map(item => item.key));
+                checkbox.checked = true;
+            }
+            
+            renderTable(cacheItems);
+        }
+
+        // 전체 선택 체크박스 상태 업데이트
+        function updateSelectAllCheckbox() {
+            const checkbox = document.getElementById('select-all-checkbox');
+            checkbox.checked = selectedKeys.size === cacheItems.length && cacheItems.length > 0;
+        }
+
+        // 선택 개수 업데이트
+        function updateSelectedCount() {
+            document.getElementById('selected-count').textContent = selectedKeys.size;
+            document.getElementById('btn-delete-selected').disabled = selectedKeys.size === 0;
+        }
+
+        // 선택 삭제
+        async function deleteSelected() {
+            if (selectedKeys.size === 0) {
+                showToast('삭제할 항목을 선택해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm(`선택한 ${selectedKeys.size}개의 캐시 항목을 삭제하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('{% url "hts:redis_cache_delete_selected" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({ keys: Array.from(selectedKeys) })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    selectedKeys.clear();
+                    loadCacheList();
+                } else {
+                    throw new Error(data.error || '삭제 실패');
+                }
+            } catch (error) {
+                showToast('삭제 실패: ' + error.message, 'error');
+            }
+        }
+
+        // 전체 삭제 확인
+        function confirmDeleteAll() {
+            if (cacheItems.length === 0) {
+                showToast('삭제할 캐시 항목이 없습니다.', 'error');
+                return;
+            }
+
+            document.getElementById('modal-title').textContent = '⚠️ 전체 삭제 확인';
+            document.getElementById('modal-text').textContent = 
+                `정말로 모든 캐시 항목(${cacheItems.length}개)을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`;
+            
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.onclick = deleteAll;
+            
+            document.getElementById('modal').classList.add('show');
+        }
+
+        // 전체 삭제
+        async function deleteAll() {
+            closeModal();
+
+            try {
+                const response = await fetch('{% url "hts:redis_cache_delete_all" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    selectedKeys.clear();
+                    loadCacheList();
+                } else {
+                    throw new Error(data.error || '삭제 실패');
+                }
+            } catch (error) {
+                showToast('삭제 실패: ' + error.message, 'error');
+            }
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        // 토스트 메시지 표시
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 날짜 포맷 (YYYYMMDD -> YYYY-MM-DD)
+        function formatDate(dateStr) {
+            if (!dateStr || dateStr.length !== 8) return dateStr;
+            return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+        }
+
+        // TTL 포맷 (초 -> readable)
+        function formatTTL(seconds) {
+            if (seconds <= 0) return '만료됨';
+            if (seconds < 60) return `${seconds}초`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}분`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}시간`;
+            return `${Math.floor(seconds / 86400)}일`;
+        }
+
+        // 크기 포맷 (바이트 -> readable)
+        function formatSize(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -5,8 +5,9 @@ from django.utils.dateparse import parse_datetime
 from django.db.models import Q
 from django.utils import timezone
 from hts.models import Stock, StockPrice, DataFetchRequest, StockTradingCalendar
+from hts.services.cache_service import get_cached_prices, cache_prices
 from .serializers import StockSerializer, StockPriceSerializer
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 
 def get_today():
@@ -423,10 +424,12 @@ class StockSymbolPriceRangeAPIView(APIView):
         - 주말/공휴일은 제외하고 실제 거래일만 확인
         - 거래일에 데이터가 없는 경우에만 Yahoo Finance 요청
         - 오늘 및 미래 날짜는 조회 불가
+        - Redis 캐싱 적용
         """
         symbol = request.query_params.get('symbol')
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
+        interval = request.query_params.get('interval', '1d')  # 기본값: 1일
 
         # 날짜 파싱
         try:
@@ -461,9 +464,23 @@ class StockSymbolPriceRangeAPIView(APIView):
                 "message": error_message
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # DB에서 데이터 조회
+        # 1. Redis 캐시에서 먼저 조회
+        cache_hit, cached_data = get_cached_prices(symbol, interval, start_date, end_date)
+        if cache_hit:
+            return Response({
+                "status": "success",
+                "message": f"Stock prices for {symbol} retrieved from cache",
+                "period": f"{start_date} to {end_date}",
+                "interval": interval,
+                "count": len(cached_data),
+                "source": "cache",
+                "data": cached_data
+            }, status=status.HTTP_200_OK)
+
+        # 2. 캐시에 없으면 DB에서 조회
         prices = StockPrice.objects.filter(
             symbol=symbol,
+            interval=interval,
             timestamp__date__range=(start_date, end_date)
         ).order_by('timestamp')
 
@@ -498,13 +515,10 @@ class StockSymbolPriceRangeAPIView(APIView):
         missing_check = check_and_request_missing_data(symbol, start_date, end_date, prices)
 
         serializer = StockPriceSerializer(prices, many=True)
+        serialized_data = serializer.data
         
-        # interval 정보 추출 (데이터가 있으면 첫 번째 데이터의 interval 사용)
-        interval = '1d'
-        if prices.exists():
-            first_price = prices.first()
-            if hasattr(first_price, 'interval') and first_price.interval:
-                interval = first_price.interval
+        # 3. DB에서 조회한 데이터를 Redis에 캐싱
+        cache_prices(symbol, interval, start_date, end_date, serialized_data)
         
         response_data = {
             "status": "success",
@@ -512,7 +526,8 @@ class StockSymbolPriceRangeAPIView(APIView):
             "period": f"{start_date} to {end_date}",
             "interval": interval,
             "count": prices.count(),
-            "data": serializer.data
+            "source": "database",
+            "data": serialized_data
         }
         
         # 누락된 거래일 데이터가 있으면 응답에 추가

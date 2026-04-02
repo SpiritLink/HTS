@@ -1,13 +1,13 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.decorators.http import require_POST
-from django.db.models import Count
-from .services import get_user_portfolio
+from hts.services.services import get_user_portfolio
 from .models import User, Stock, DataFetchRequest, StockPrice, StockTradingCalendar
 from .tasks import fetch_stock_data, process_pending_fetch_requests
+from .cache_service import get_all_cache_items, delete_cache_items, delete_all_cache
 from datetime import datetime, timedelta
 import redis
 import json
@@ -257,6 +257,61 @@ def celery_queue_status(request):
             'queue_sample': queue_sample,
             'pending_db_count': DataFetchRequest.objects.filter(status='PENDING').count(),
             'processing_db_count': DataFetchRequest.objects.filter(status='PROCESSING').count(),
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def redis_cache_view(request):
+    """Redis 캐시 조회 페이지"""
+    return render(request, 'hts/redis_cache.html')
+
+
+def redis_cache_list_api(request):
+    """Redis 캐시 목록 조회 API"""
+    try:
+        items = get_all_cache_items()
+        return JsonResponse({
+            'success': True,
+            'count': len(items),
+            'items': items
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@require_POST
+def redis_cache_delete_selected(request):
+    """선택한 Redis 캐시 항목 삭제 API"""
+    try:
+        data = json.loads(request.body)
+        keys = data.get('keys', [])
+        
+        if not keys:
+            return JsonResponse({
+                'success': False,
+                'message': '삭제할 항목을 선택해주세요.'
+            })
+        
+        deleted_count = delete_cache_items(keys)
+        return JsonResponse({
+            'success': True,
+            'message': f'{deleted_count}개의 캐시 항목이 삭제되었습니다.',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@require_POST
+def redis_cache_delete_all(request):
+    """모든 Redis 캐시 삭제 API"""
+    try:
+        deleted_count = delete_all_cache()
+        return JsonResponse({
+            'success': True,
+            'message': f'{deleted_count}개의 캐시 항목이 모두 삭제되었습니다.',
+            'deleted_count': deleted_count
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

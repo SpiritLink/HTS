@@ -123,12 +123,25 @@ REST_FRAMEWORK = {
 }
 
 # ==========================================
+# Redis 설정
+# ==========================================
+
+# Redis 서버 설정
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+REDIS_DB_CELERY = int(os.environ.get('REDIS_DB_CELERY', 0))  # Celery용 DB
+REDIS_DB_CACHE = int(os.environ.get('REDIS_DB_CACHE', 1))     # 캐싱용 DB
+
+# 주식 가격 캐싱 설정
+STOCK_PRICE_CACHE_TTL = int(os.environ.get('STOCK_PRICE_CACHE_TTL', 3600))  # 기본 1시간
+
+# ==========================================
 # Celery 설정
 # ==========================================
 
 # Redis를 브로커로 사용
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_CELERY}')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_CELERY}')
 
 # 직렬화 설정
 CELERY_ACCEPT_CONTENT = ['json']
