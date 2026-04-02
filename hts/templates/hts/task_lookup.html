@@ -33,62 +33,28 @@
             margin-bottom: 30px; 
         }
 
-        .btn-group { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 16px; 
-            max-width: 400px; 
-            margin: 0 auto 30px; 
-        }
-        .btn { 
-            padding: 16px 24px; 
-            border-radius: 6px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            text-decoration: none; 
-            box-sizing: border-box; 
-            transition: all 0.2s; 
-            cursor: pointer; 
-            text-align: center; 
-            display: block; 
-            border: none;
-        }
-        .btn-primary { 
-            background-color: #6f42c1; 
-            color: #fff; 
-        }
-        .btn-primary:hover { 
-            background-color: #5a32a3; 
-        }
         .btn-secondary { 
             background-color: #fff; 
             color: #495057; 
             border: 1px solid #ced4da; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            text-decoration: none; 
+            transition: all 0.2s; 
+            cursor: pointer;
         }
         .btn-secondary:hover { 
             background-color: #f1f3f5; 
             color: #111; 
         }
 
-        /* 상태 배지 스타일 */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-pending { background-color: #ffc107; color: #000; }
-        .status-processing { background-color: #17a2b8; color: #fff; }
-        .status-completed { background-color: #28a745; color: #fff; }
-        .status-failed { background-color: #dc3545; color: #fff; }
-
         /* Redis 큐 상태 패널 */
         .redis-panel {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 12px;
             padding: 25px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             color: white;
             text-align: left;
         }
@@ -164,13 +130,89 @@
             margin-top: 15px;
             font-size: 14px;
         }
+
+        /* 메뉴 패널 공통 스타일 */
+        .menu-panel {
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        .menu-panel h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .menu-panel p {
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        .btn-menu {
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-menu:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* 가격 조회 큐 패널 (볍황색 계열) */
+        .queue-panel {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .btn-queue {
+            background: rgba(255,255,255,0.95);
+            color: #f5576c;
+        }
+        .btn-queue:hover {
+            background: white;
+        }
+
+        /* 작업 등록 패널 (초록색 계열) */
+        .register-panel {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        .btn-register {
+            background: rgba(255,255,255,0.95);
+            color: #11998e;
+        }
+        .btn-register:hover {
+            background: white;
+        }
+
+        /* 메인으로 돌아가기 패널 */
+        .back-panel {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            text-align: center;
+        }
+        .btn-back {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-back:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>작업 조회 메뉴</h1>
 
-        <!-- Redis 큐 실시간 상태 -->
+        <!-- 1. Redis 큐 실시간 상태 -->
         <div class="redis-panel">
             <h2>
                 📦 Redis 큐 실시간 상태
@@ -209,18 +251,29 @@
             <div id="error-message" class="connection-error" style="display: none;"></div>
         </div>
 
-        <div class="btn-group">
-            <a href="{% url 'hts:task_queue_list' %}" class="btn btn-primary">가격 조회 큐 상세 조회 페이지 이동</a>
-            <a href="{% url 'hts:index' %}" class="btn btn-secondary">메인으로 돌아가기</a>
+        <!-- 2. 가격 조회 큐 상세 조회 -->
+        <div class="menu-panel queue-panel">
+            <h2>📋 가격 조회 큐 상세 조회</h2>
+            <p>Yahoo Finance에서 주가 데이터를 가져오기 위한 요청 큐의 상세 내역을 확인하고 관리할 수 있습니다. 요청의 상태(PENDING, PROCESSING, COMPLETED, FAILED)를 확인하고 필요한 작업을 재시도하거나 처리할 수 있습니다.</p>
+            <a href="{% url 'hts:task_queue_list' %}" class="btn-menu btn-queue">
+                🔍 큐 상세 조회하기
+            </a>
         </div>
 
-        <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; text-align: left;">
-            <h3 style="margin-top: 0; color: #495057; font-size: 16px;">탐색 안내</h3>
-            <ul style="color: #666; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li><strong>가격 조회 큐 상세 조회</strong>: Yahoo Finance에서 주가 데이터를 가져오기 위한 요청 큐의 상세 내역을 확인하고 관리할 수 있습니다.</li>
-                <li><strong>Redis 큐 실시간 상태</strong>: Celery/Redis 큐의 실시간 상태를 보여줍니다.</li>
-                <li>요청의 상태는 PENDING(대기중), PROCESSING(처리중), COMPLETED(완료), FAILED(실패)로 구분됩니다.</li>
-            </ul>
+        <!-- 3. 가격 정보 작업 등록 -->
+        <div class="menu-panel register-panel">
+            <h2>📊 가격 정보 작업 등록</h2>
+            <p>기간을 설정하고 해당 기간 동안 가격 정보가 불충분한 종목들을 조회하여 작업으로 등록합니다. 등록된 작업은 Celery 큐를 통해 자동으로 Yahoo Finance에서 데이터를 가져옵니다.</p>
+            <a href="{% url 'hts:task_register' %}" class="btn-menu btn-register">
+                🚀 가격 정보 작업 등록하기
+            </a>
+        </div>
+
+        <!-- 4. 메인으로 돌아가기 -->
+        <div class="menu-panel back-panel">
+            <a href="{% url 'hts:index' %}" class="btn-menu btn-back">
+                ← 메인으로 돌아가기
+            </a>
         </div>
     </div>
 

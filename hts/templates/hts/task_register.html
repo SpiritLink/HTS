@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가격 정보 작업 등록 - HTS</title>
+    <style>
+        body { 
+            font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+            background-color: #f4f6f9; 
+            color: #333; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            box-sizing: border-box; 
+        }
+        h1 { 
+            margin-top: 0; 
+            font-size: 24px; 
+            color: #111; 
+            letter-spacing: -0.5px; 
+            border-bottom: 2px solid #111; 
+            padding-bottom: 15px; 
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-secondary { 
+            background-color: #fff; 
+            color: #495057; 
+            border: 1px solid #ced4da; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            text-decoration: none; 
+            transition: all 0.2s; 
+            cursor: pointer;
+        }
+        .btn-secondary:hover { 
+            background-color: #f1f3f5; 
+            color: #111; 
+        }
+
+        .btn-primary {
+            background-color: #004ea2;
+            color: #fff;
+            border: 1px solid #004ea2;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #003a79;
+        }
+        .btn-primary:disabled {
+            background-color: #adb5bd;
+            border-color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        /* 기간 설정 영역 */
+        .date-filter-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            color: white;
+        }
+        .date-filter-panel h2 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+        }
+        .date-inputs {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .date-input-wrapper {
+            flex: 1;
+            min-width: 150px;
+        }
+        .date-input-wrapper label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+        .date-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: none;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .date-separator {
+            font-size: 18px;
+            padding-top: 20px;
+        }
+        .btn-search {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #764ba2;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+        }
+        .btn-search:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+        .btn-search:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 결과 테이블 */
+        .results-panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            display: none;
+        }
+        .results-panel.active {
+            display: block;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .results-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111;
+            margin: 0;
+        }
+        .results-count {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+            color: #495057;
+        }
+        .data-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .data-table input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* 데이터 상태 표시 */
+        .data-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .data-status-missing { background: #ffc107; color: #000; }
+        .data-status-partial { background: #fd7e14; color: #fff; }
+        .data-status-ok { background: #28a745; color: #fff; }
+
+        /* 작업 등록 버튼 영역 */
+        .action-panel {
+            display: none;
+            background: #e9f2ff;
+            border: 2px solid #004ea2;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .action-panel.active {
+            display: block;
+        }
+        .action-panel p {
+            margin: 0 0 15px 0;
+            color: #004ea2;
+            font-weight: 600;
+        }
+
+        /* 로딩 및 메시지 */
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            display: none;
+        }
+        .loader.active {
+            display: block;
+        }
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            display: none;
+        }
+        .empty-message.active {
+            display: block;
+        }
+
+        /* 토스트 메시지 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            z-index: 10000;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.show { display: block; }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        .toast.info { background: #17a2b8; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 진행 상태 */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>📊 가격 정보 작업 등록</span>
+            <a href="{% url 'hts:task_lookup' %}" class="btn-secondary">← 돌아가기</a>
+        </h1>
+
+        <!-- 기간 설정 -->
+        <div class="date-filter-panel">
+            <h2>📅 조회 기간 설정</h2>
+            <div class="date-inputs">
+                <div class="date-input-wrapper">
+                    <label for="start-date">시작일</label>
+                    <input type="date" id="start-date" class="date-input">
+                </div>
+                <span class="date-separator">~</span>
+                <div class="date-input-wrapper">
+                    <label for="end-date">종료일</label>
+                    <input type="date" id="end-date" class="date-input">
+                </div>
+            </div>
+            <button id="btn-search" class="btn-search" onclick="searchIncompleteStocks()">
+                🔍 불충분한 데이터 조회
+            </button>
+        </div>
+
+        <!-- 로딩 표시 -->
+        <div id="loader" class="loader">
+            <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
+            <div>데이터를 분석 중입니다...</div>
+        </div>
+
+        <!-- 결과 없음 메시지 -->
+        <div id="empty-message" class="empty-message">
+            <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">모든 종목의 데이터가 충분합니다</div>
+            <div style="font-size: 14px; color: #6c757d;">선택한 기간 내 모든 종목이 완전한 가격 정보를 가지고 있습니다.</div>
+        </div>
+
+        <!-- 조회 결과 -->
+        <div id="results-panel" class="results-panel">
+            <div class="results-header">
+                <h3 class="results-title">📋 데이터가 불충분한 종목</h3>
+                <span class="results-count">
+                    총 <strong id="total-count">0</strong>개 종목 중 
+                    <strong id="selected-count">0</strong>개 선택
+                </span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">
+                                <input type="checkbox" id="select-all" onclick="toggleSelectAll()">
+                            </th>
+                            <th>종목코드</th>
+                            <th>종목명</th>
+                            <th>시장</th>
+                            <th>예상 거래일</th>
+                            <th>보유 데이터</th>
+                            <th>부족률</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 작업 등록 버튼 -->
+            <div id="action-panel" class="action-panel">
+                <p id="action-text">0개 종목의 데이터를 요청합니다</p>
+                <button class="btn-primary" onclick="registerBulkTasks()">
+                    🚀 작업 등록하기
+                </button>
+                <div id="progress-bar" class="progress-bar" style="display: none;">
+                    <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = [];
+        let selectedStocks = new Set();
+
+        // 페이지 로드 시 기본 날짜 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - 1); // 어제
+            
+            const startDate = new Date(endDate);
+            startDate.setMonth(startDate.getMonth() - 1); // 1개월 전
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+        });
+
+        // CSRF 토큰 가져오기
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Toast 메시지 표시
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type} show`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // 불충분한 데이터 조회
+        async function searchIncompleteStocks() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            if (!startDate || !endDate) {
+                showToast('시작일과 종료일을 모두 선택해주세요.', 'error');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showToast('시작일은 종료일보다 이전이어야 합니다.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-search');
+            btn.disabled = true;
+            btn.textContent = '🔍 조회 중...';
+            
+            document.getElementById('loader').classList.add('active');
+            document.getElementById('results-panel').classList.remove('active');
+            document.getElementById('empty-message').classList.remove('active');
+
+            try {
+                const response = await fetch(`/hts/api/stocks/incomplete-data/?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentResults = data.stocks;
+                    renderResults(data.stocks, data.total_trading_days);
+                } else {
+                    showToast(data.message || '조회 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                showToast('서버 연결 오류: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 불충분한 데이터 조회';
+                document.getElementById('loader').classList.remove('active');
+            }
+        }
+
+        // 결과 렌더링
+        function renderResults(stocks, totalTradingDays) {
+            const tbody = document.getElementById('results-tbody');
+            tbody.innerHTML = '';
+            selectedStocks.clear();
+            
+            if (stocks.length === 0) {
+                document.getElementById('empty-message').classList.add('active');
+                return;
+            }
+
+            stocks.forEach(stock => {
+                const tr = document.createElement('tr');
+                const missingRate = Math.round((stock.missing_days / totalTradingDays) * 100);
+                
+                let statusClass = 'data-status-missing';
+                let statusText = '부족';
+                if (missingRate < 30) {
+                    statusClass = 'data-status-partial';
+                    statusText = '일부부족';
+                }
+                
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="stock-checkbox" value="${stock.symbol}" onchange="toggleStock('${stock.symbol}')"></td>
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td>${stock.name}</td>
+                    <td>${stock.market}</td>
+                    <td>${totalTradingDays}일</td>
+                    <td>${stock.data_count}일</td>
+                    <td>${stock.missing_days}일 (${missingRate}%)</td>
+                    <td><span class="data-status ${statusClass}">${statusText}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('total-count').textContent = stocks.length;
+            updateSelectedCount();
+            document.getElementById('results-panel').classList.add('active');
+        }
+
+        // 전체 선택/해제
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('select-all').checked;
+            const checkboxes = document.querySelectorAll('.stock-checkbox');
+            
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll;
+                if (selectAll) {
+                    selectedStocks.add(cb.value);
+                } else {
+                    selectedStocks.delete(cb.value);
+                }
+            });
+            
+            updateSelectedCount();
+        }
+
+        // 개별 종목 선택
+        function toggleStock(symbol) {
+            if (selectedStocks.has(symbol)) {
+                selectedStocks.delete(symbol);
+            } else {
+                selectedStocks.add(symbol);
+            }
+            updateSelectedCount();
+        }
+
+        // 선택 개수 업데이트
+        function updateSelectedCount() {
+            const count = selectedStocks.size;
+            document.getElementById('selected-count').textContent = count;
+            
+            const actionPanel = document.getElementById('action-panel');
+            const actionText = document.getElementById('action-text');
+            
+            if (count > 0) {
+                actionPanel.classList.add('active');
+                actionText.textContent = `${count}개 종목의 데이터를 요청합니다`;
+            } else {
+                actionPanel.classList.remove('active');
+            }
+        }
+
+        // 작업 일괄 등록
+        async function registerBulkTasks() {
+            if (selectedStocks.size === 0) {
+                showToast('등록할 종목을 선택해주세요.', 'error');
+                return;
+            }
+
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const symbols = Array.from(selectedStocks);
+
+            const btn = document.querySelector('#action-panel .btn-primary');
+            btn.disabled = true;
+            btn.textContent = '등록 중...';
+            
+            document.getElementById('progress-bar').style.display = 'block';
+            document.getElementById('progress-fill').style.width = '0%';
+
+            try {
+                const response = await fetch('/hts/api/stocks/bulk-request/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        symbols: symbols,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('progress-fill').style.width = '100%';
+                    showToast(`${data.registered_count}개 작업이 성공적으로 등록되었습니다!`, 'success');
+                    
+                    // 2초 후 큐 조회 페이지로 이동
+                    setTimeout(() => {
+                        window.location.href = '{% url "hts:task_queue_list" %}';
+                    }, 2000);
+                } else {
+                    showToast(data.message || '작업 등록 중 오류가 발생했습니다.', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '🚀 작업 등록하기';
+                }
+            } catch (error) {
+                showToast('서버 연결 오류: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '🚀 작업 등록하기';
+            }
+        }
+    </script>
+</body>
+</html>

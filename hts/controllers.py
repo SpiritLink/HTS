@@ -4,13 +4,18 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.decorators.http import require_POST
+from django.db.models import Count
 from .services import get_user_portfolio
-from .models import User, Stock, DataFetchRequest
+from .models import User, Stock, DataFetchRequest, StockPrice, StockTradingCalendar
 from .tasks import fetch_stock_data, process_pending_fetch_requests
+from datetime import datetime, timedelta
 import redis
+import json
+
 
 def index(request):
     return render(request, 'hts/index.html')
+
 
 def login_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동
@@ -32,6 +37,7 @@ def login_view(request):
             error_message = "아이디 또는 비밀번호가 일치하지 않습니다."
             
     return render(request, 'hts/login.html', {'error_message': error_message})
+
 
 def register_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동
@@ -57,9 +63,11 @@ def register_view(request):
             
     return render(request, 'hts/register.html', {'error_message': error_message})
 
+
 def logout_view(request):
     logout(request)
     return redirect('hts:index')
+
 
 @login_required(login_url='/hts/login/')
 def dashboard(request):
@@ -72,6 +80,7 @@ def dashboard(request):
     
     # 2. Service로부터 받은 결과를 Template(화면)으로 전달
     return render(request, 'hts/dashboard.html', portfolio_data)
+
 
 # @login_required 데코레이터 제거 (비로그인 상태에서도 검색 가능하도록 수정)
 def search_stocks(request):
@@ -93,21 +102,32 @@ def search_stocks(request):
     
     return JsonResponse({'results': results})
 
+
 def info_lookup_view(request):
     return render(request, 'hts/info_lookup.html')
+
 
 def stock_list_view(request):
     return render(request, 'hts/stock_list.html')
 
+
 def stock_search_page_view(request):
     return render(request, 'hts/stock_search.html')
+
 
 def dev_guide_view(request):
     return render(request, 'hts/dev_guide.html')
 
+
 def task_lookup_view(request):
     """작업 조회 메인 페이지"""
     return render(request, 'hts/task_lookup.html')
+
+
+def task_register_view(request):
+    """가격 정보 작업 등록 페이지"""
+    return render(request, 'hts/task_register.html')
+
 
 def task_queue_list_view(request):
     """가격 조회 큐 조회 페이지 (페이지네이션)"""
@@ -208,10 +228,6 @@ def clear_completed_tasks(request):
 
 def celery_queue_status(request):
     """Celery/Redis 큐 상태 확인 API"""
-    if request.method == 'POST' and request.body:
-        # POST with CSRF check for state-changing operations
-        pass
-    
     try:
         r = redis.Redis(host='localhost', port=6379, db=0)
         
@@ -226,7 +242,6 @@ def celery_queue_status(request):
         queue_sample = []
         for item in queue_items:
             try:
-                import json
                 data = json.loads(item)
                 queue_sample.append({
                     'task': data.get('headers', {}).get('task', 'unknown'),
@@ -245,3 +260,148 @@ def celery_queue_status(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+def get_incomplete_stocks(request):
+    """
+    기간 내에 가격 정보가 불충분한 종목들을 조회하는 API
+    """
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if not start_date_str or not end_date_str:
+        return JsonResponse({
+            'success': False,
+            'message': '시작일과 종료일이 필요합니다.'
+        }, status=400)
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'message': '잘못된 날짜 형식입니다. (YYYY-MM-DD)'
+        }, status=400)
+    
+    if start_date > end_date:
+        return JsonResponse({
+            'success': False,
+            'message': '시작일은 종료일보다 이전이어야 합니다.'
+        }, status=400)
+    
+    # 거래일 계산 (주말 제외)
+    trading_days = []
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5:  # 월-금
+            trading_days.append(current)
+        current += timedelta(days=1)
+    
+    total_trading_days = len(trading_days)
+    
+    if total_trading_days == 0:
+        return JsonResponse({
+            'success': True,
+            'stocks': [],
+            'total_trading_days': 0,
+            'message': '해당 기간에 거래일이 없습니다.'
+        })
+    
+    # 모든 종목 조회
+    stocks = Stock.objects.all()
+    incomplete_stocks = []
+    
+    for stock in stocks:
+        # 해당 기간의 데이터 수 조회
+        data_count = StockPrice.objects.filter(
+            symbol=stock.symbol,
+            timestamp__date__range=(start_date, end_date)
+        ).count()
+        
+        # 90% 미만인 경우만 포함 (약간의 여유 허용)
+        threshold = int(total_trading_days * 0.9)
+        
+        if data_count < threshold:
+            incomplete_stocks.append({
+                'symbol': stock.symbol,
+                'name': stock.name,
+                'market': stock.market,
+                'data_count': data_count,
+                'missing_days': total_trading_days - data_count,
+                'expected_days': total_trading_days
+            })
+    
+    # 부족률 기준으로 정렬 (데이터가 가장 적은 순)
+    incomplete_stocks.sort(key=lambda x: x['data_count'])
+    
+    return JsonResponse({
+        'success': True,
+        'stocks': incomplete_stocks,
+        'total_trading_days': total_trading_days,
+        'count': len(incomplete_stocks)
+    })
+
+
+@require_POST
+def bulk_request_prices(request):
+    """
+    선택한 종목들의 기간별 가격 정보를 요청하는 API
+    """
+    try:
+        data = json.loads(request.body)
+        symbols = data.get('symbols', [])
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+        
+        if not symbols or not start_date_str or not end_date_str:
+            return JsonResponse({
+                'success': False,
+                'message': '종목, 시작일, 종료일이 모두 필요합니다.'
+            }, status=400)
+        
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        registered_count = 0
+        already_exists_count = 0
+        
+        for symbol in symbols:
+            # 이미 존재하는 요청인지 확인
+            existing = DataFetchRequest.objects.filter(
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                status__in=['PENDING', 'PROCESSING']
+            ).first()
+            
+            if existing:
+                already_exists_count += 1
+                continue
+            
+            # 새로운 요청 생성
+            DataFetchRequest.objects.create(
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                status='PENDING'
+            )
+            registered_count += 1
+        
+        return JsonResponse({
+            'success': True,
+            'registered_count': registered_count,
+            'already_exists_count': already_exists_count,
+            'message': f'{registered_count}개 작업 등록 완료'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '잘못된 JSON 형식입니다.'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
