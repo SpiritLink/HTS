@@ -1,55 +1,37 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가격 조회 큐 조회 - HTS</title>
-    <style>
-        body { 
-            font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
-            background-color: #f4f6f9; 
-            color: #333; 
-            margin: 0; 
-            padding: 20px 10px; 
-        }
-        .container { 
-            max-width: 1000px; 
-            margin: 0 auto; 
-            background: #fff; 
-            padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-            box-sizing: border-box; 
-        }
-        h1 { 
-            margin-top: 0; 
-            font-size: 24px; 
-            color: #111; 
-            letter-spacing: -0.5px; 
-            border-bottom: 2px solid #111; 
-            padding-bottom: 15px; 
-            margin-bottom: 25px; 
+{% extends 'hts/base.html' %}
+
+{% block title %}가격 조회 큐 조회 - HTS{% endblock %}
+
+{% block head_extra %}{% csrf_token %}{% endblock %}
+
+{% block extra_css %}
+        /* 헤더 액션 영역 */
+        .header-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #111;
+            font-size: 18px;
         }
 
-        .btn-secondary { 
-            background-color: #fff; 
-            color: #495057; 
-            border: 1px solid #ced4da; 
-            padding: 8px 16px; 
-            border-radius: 6px; 
-            font-size: 14px; 
-            text-decoration: none; 
-            transition: all 0.2s; 
-            cursor: pointer;
-        }
-        .btn-secondary:hover { 
-            background-color: #f1f3f5; 
-            color: #111; 
-        }
-
+        /* 필터 영역 */
         .filter-container {
             background-color: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -100,6 +82,35 @@
             text-decoration: none;
             display: inline-block;
         }
+        .btn-reset:hover {
+            background-color: #5a6268;
+        }
+
+        /* 요약 카드 */
+        .summary-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-card {
+            flex: 1;
+            min-width: 140px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .summary-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
 
         /* 관리 버튼 스타일 */
         .admin-panel {
@@ -134,7 +145,6 @@
         }
         .btn-admin.process { color: #28a745; }
         .btn-admin.retry { color: #ffc107; }
-        .btn-admin.clear { color: #dc3545; }
         .btn-admin.status { color: #17a2b8; }
 
         /* 큐 상태 패널 */
@@ -151,158 +161,77 @@
         }
         .queue-status-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 15px;
             margin-bottom: 15px;
         }
         .queue-status-item {
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
             text-align: center;
-            border-left: 4px solid #667eea;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
         }
         .queue-status-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #6c757d;
             margin-bottom: 5px;
         }
         .queue-status-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #111;
         }
         .queue-sample {
+            font-size: 12px;
+            color: #495057;
             background: white;
             padding: 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-family: monospace;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 100px;
+            overflow-y: auto;
         }
 
-        /* 톱시 메시지 */
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-            z-index: 10000;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-        .toast.show {
-            display: block;
-        }
-        .toast.success { background: #28a745; }
-        .toast.error { background: #dc3545; }
-        .toast.info { background: #17a2b8; }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
+        /* 테이블 스타일 */
         .table-responsive {
             overflow-x: auto;
-            margin-top: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
         }
         .table-krds {
             width: 100%;
             border-collapse: collapse;
-            text-align: center;
+            font-size: 14px;
         }
         .table-krds th, .table-krds td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #dee2e6;
-            font-size: 14px;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
         }
         .table-krds th {
             background-color: #f8f9fa;
             font-weight: 600;
-            color: #111;
-            border-top: 2px solid #495057;
-            border-bottom: 2px solid #dee2e6;
+            color: #495057;
         }
         .table-krds tbody tr:hover {
-            background-color: #f1f3f5;
+            background-color: #f8f9fa;
         }
 
+        /* 상태 배지 */
         .status-badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .status-pending { background-color: #ffc107; color: #000; }
-        .status-processing { background-color: #17a2b8; color: #fff; }
-        .status-completed { background-color: #28a745; color: #fff; }
-        .status-failed { background-color: #dc3545; color: #fff; }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 30px;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .pagination a, .pagination span {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 36px;
-            height: 36px;
-            padding: 0 12px;
-            border: 1px solid #dee2e6;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 14px;
-            color: #495057;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        .pagination a:hover {
-            background-color: #f1f3f5;
-            border-color: #adb5bd;
-        }
-        .pagination .current {
-            background-color: #6f42c1;
-            color: #fff;
-            border-color: #6f42c1;
-            font-weight: bold;
-        }
-        .pagination .disabled {
-            color: #adb5bd;
-            cursor: not-allowed;
-        }
-
-        .summary-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .summary-card {
-            flex: 1;
-            min-width: 140px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-        }
-        .summary-count {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111;
-        }
-        .summary-label {
             font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
+            font-weight: 600;
         }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-processing { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
 
+        /* 빈 메시지 */
         .empty-msg {
             text-align: center;
             padding: 60px 20px;
@@ -313,221 +242,71 @@
             margin-bottom: 15px;
         }
 
+        /* 토스트 메시지 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 자동 새로고침 인디케이터 */
+        #refresh-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
         @media (max-width: 768px) {
-            .container { padding: 20px; }
-            h1 { font-size: 20px; }
-            .table-krds th, .table-krds td { font-size: 12px; padding: 8px 6px; }
+            .summary-container { flex-direction: column; }
+            .summary-card { min-width: auto; }
             .filter-container { flex-direction: column; align-items: stretch; }
             .filter-group { width: 100%; }
+            .admin-buttons { flex-direction: column; }
+            .table-krds th, .table-krds td { font-size: 12px; padding: 8px; }
         }
-    </style>
-    <script>
-        // 페이지 새로고침 함수
-        function refreshPage() {
-            // 현재 URL 유지하면서 새로고침
-            window.location.reload();
-        }
+{% endblock %}
 
-        // 자동 새로고침 설정 (30초 매월)
-        let autoRefreshInterval;
-        
-        function startAutoRefresh() {
-            autoRefreshInterval = setInterval(function() {
-                refreshPage();
-            }, 30000); // 30초
-        }
-
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-        }
-
-        // 페이지 로드 시 자동 새로고침 시작
-        document.addEventListener('DOMContentLoaded', function() {
-            // 새로고침 간격 물언보기 표시
-            const refreshIndicator = document.createElement('div');
-            refreshIndicator.id = 'refresh-indicator';
-            refreshIndicator.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
-            refreshIndicator.innerHTML = '⏲️ 30초 후 자동 새로고침';
-            refreshIndicator.onclick = function() {
-                refreshPage();
-            };
-            document.body.appendChild(refreshIndicator);
-
-            // 30초 후 자동 새로고침
-            setTimeout(function() {
-                refreshPage();
-            }, 30000);
-
-            // 마우스 움직임 감지 시 새로고침 지연
-            let mouseTimeout;
-            document.addEventListener('mousemove', function() {
-                clearTimeout(mouseTimeout);
-                document.getElementById('refresh-indicator').style.display = 'block';
-                mouseTimeout = setTimeout(function() {
-                    // 마우스 5초 간 움직이면 새로고침 지연
-                }, 5000);
-            });
-        });
-
-        // 페이지 를 떠날 때 자동 새로고침 정지
-        window.addEventListener('beforeunload', function() {
-            stopAutoRefresh();
-        });
-
-        // 톱시 메시지 표시
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type} show`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-
-        // 큐 상태 확인
-        async function checkQueueStatus() {
-            try {
-                const response = await fetch('{% url "hts:celery_status" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('queue-length').textContent = data.queue_length;
-                    document.getElementById('scheduled-count').textContent = data.scheduled_count;
-                    document.getElementById('pending-db').textContent = data.pending_db_count;
-                    document.getElementById('processing-db').textContent = data.processing_db_count;
-                    
-                    const sampleContainer = document.getElementById('queue-sample');
-                    if (data.queue_sample.length > 0) {
-                        sampleContainer.innerHTML = data.queue_sample.map(item => 
-                            `<div>• ${item.task || 'unknown'} (${item.id || 'unknown'})</div>`
-                        ).join('');
-                    } else {
-                        sampleContainer.innerHTML = '<div style="color: #6c757d;">큐가 비어있습니다.</div>';
-                    }
-                    
-                    document.getElementById('queue-status-panel').classList.add('active');
-                } else {
-                    showToast('큐 상태 확인 실패: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showToast('큐 상태 확인 중 오류 발생', 'error');
-            }
-        }
-
-        // 모든 PENDING 작업 처리
-        async function processAllPending() {
-            if (!confirm('모든 PENDING 상태의 작업을 큐에 넣으시겠습니까?')) return;
-            
-            try {
-                const response = await fetch('{% url "hts:process_pending" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    setTimeout(() => refreshPage(), 1500);
-                } else {
-                    showToast(data.message, 'error');
-                }
-            } catch (error) {
-                showToast('작업 처리 중 오류 발생', 'error');
-            }
-        }
-
-        // FAILED 작업 재시도
-        async function retryFailedTasks() {
-            const checkboxes = document.querySelectorAll('.retry-checkbox:checked');
-            if (checkboxes.length === 0) {
-                showToast('재시도할 작업을 선택해주세요.', 'info');
-                return;
-            }
-            
-            let success = 0, failed = 0;
-            for (const checkbox of checkboxes) {
-                try {
-                    const response = await fetch(`/hts/tasks/queue/retry/${checkbox.value}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
-                    const data = await response.json();
-                    if (data.success) success++;
-                    else failed++;
-                } catch (error) {
-                    failed++;
-                }
-            }
-            
-            showToast(`${success}개 성공, ${failed}개 실패`, success > 0 ? 'success' : 'error');
-            setTimeout(() => refreshPage(), 1500);
-        }
-
-        // 완료된 작업 삭제
-        async function clearCompleted() {
-            if (!confirm('모든 COMPLETED 상태의 작업을 삭제하시겠습니까?')) return;
-            
-            try {
-                const response = await fetch('{% url "hts:clear_completed" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    setTimeout(() => refreshPage(), 1500);
-                } else {
-                    showToast(data.message, 'error');
-                }
-            } catch (error) {
-                showToast('작업 삭제 중 오류 발생', 'error');
-            }
-        }
-
-        // CSRF 토큰 가져오기
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    </script>
-</head>
-<body>
+{% block content %}
     <div class="container">
-        <h1>
+        <h1 style="display: flex; justify-content: space-between; align-items: center;">
             <span>가격 조회 큐 조회</span>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="refreshPage()" class="btn-secondary" style="border-color: #28a745; color: #28a745;">
-                    🔄 새로고침
-                </button>
-                <a href="{% url 'hts:task_lookup' %}" class="btn-secondary">뒤로가기</a>
-            </div>
+            <a href="{% url 'hts:task_lookup' %}" class="btn-secondary">작업 조회 메뉴로 돌아가기</a>
         </h1>
 
+        <!-- 헤더 액션 영역 -->
+        <div class="header-actions">
+            <div class="stats">
+                <div class="stat-item">
+                    <span>총 작업:</span>
+                    <span id="total-count" class="stat-value">-</span>
+                </div>
+            </div>
+            <button class="btn-refresh" onclick="refreshPage()">
+                🔄 새로고침
+            </button>
+        </div>
+
+        <!-- 요약 카드 -->
         <div class="summary-container">
             <div class="summary-card">
                 <div class="summary-count">{{ total_count }}</div>
@@ -543,7 +322,7 @@
             </div>
             <div class="summary-card">
                 <div class="summary-count" style="color: #28a745;">{{ completed_count }}</div>
-                <div class="summary-label">COMPLETED (완룋)</div>
+                <div class="summary-label">COMPLETED (완료)</div>
             </div>
             <div class="summary-card">
                 <div class="summary-count" style="color: #dc3545;">{{ failed_count }}</div>
@@ -592,6 +371,7 @@
             <div id="queue-sample" class="queue-sample"></div>
         </div>
 
+        <!-- 필터 -->
         <form method="get" class="filter-container">
             <div class="filter-group">
                 <label class="filter-label">상태:</label>
@@ -613,6 +393,7 @@
             </div>
         </form>
 
+        <!-- 테이블 -->
         <div class="table-responsive">
             <table class="table-krds">
                 <thead>
@@ -661,7 +442,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="9">
                             <div class="empty-msg">
                                 <div class="empty-msg-icon">📭</div>
                                 <div>요청이 없습니다.</div>
@@ -672,91 +453,183 @@
                 </tbody>
             </table>
         </div>
-
-        <script>
-            // 전체 선택/해제
-            function toggleAll(checkbox) {
-                const checkboxes = document.querySelectorAll('.retry-checkbox');
-                checkboxes.forEach(cb => cb.checked = checkbox.checked);
-            }
-
-            // 단일 작업 재시도
-            async function retrySingleTask(taskId) {
-                try {
-                    const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showToast(data.message, 'success');
-                        setTimeout(() => refreshPage(), 1000);
-                    } else {
-                        showToast(data.message, 'error');
-                    }
-                } catch (error) {
-                    showToast('작업 재시도 중 오류 발생', 'error');
-                }
-            }
-
-            // 단일 PENDING 작업 바로 실행
-            async function processSingleTask(taskId) {
-                try {
-                    const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showToast('작업이 큐에 추가되었습니다.', 'success');
-                        setTimeout(() => refreshPage(), 1000);
-                    } else {
-                        showToast(data.message, 'error');
-                    }
-                } catch (error) {
-                    showToast('작업 실행 중 오류 발생', 'error');
-                }
-            }
-        </script>
-
-        {% if tasks.has_other_pages %}
-        <div class="pagination">
-            {% if tasks.has_previous %}
-                <a href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">« 처음</a>
-                <a href="?page={{ tasks.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">‹ 이전</a>
-            {% else %}
-                <span class="disabled">« 처음</span>
-                <span class="disabled">‹ 이전</span>
-            {% endif %}
-
-            {% for num in page_range %}
-                {% if num == tasks.number %}
-                    <span class="current">{{ num }}</span>
-                {% elif num == '...' %}
-                    <span>...</span>
-                {% else %}
-                    <a href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">{{ num }}</a>
-                {% endif %}
-            {% endfor %}
-
-            {% if tasks.has_next %}
-                <a href="?page={{ tasks.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">다음 ›</a>
-                <a href="?page={{ tasks.paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">마지막 »</a>
-            {% else %}
-                <span class="disabled">다음 ›</span>
-                <span class="disabled">마지막 »</span>
-            {% endif %}
-        </div>
-        <div style="text-align: center; margin-top: 10px; color: #6c757d; font-size: 13px;">
-            총 {{ tasks.paginator.count }}개 요청 중 {{ tasks.start_index }} - {{ tasks.end_index }} 표시
-        </div>
-        {% endif %}
     </div>
-</body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let autoRefreshInterval;
+
+        // 페이지 새로고침
+        function refreshPage() {
+            window.location.reload();
+        }
+
+        // 자동 새로고침
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(refreshPage, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 총 작업 수 업데이트
+            const taskRows = document.querySelectorAll('.table-krds tbody tr');
+            const totalCount = taskRows.length;
+            const totalCountEl = document.getElementById('total-count');
+            if (totalCountEl) {
+                totalCountEl.textContent = totalCount;
+            }
+
+            // 새로고침 인디케이터
+            const refreshIndicator = document.createElement('div');
+            refreshIndicator.id = 'refresh-indicator';
+            refreshIndicator.innerHTML = '⏲️ 30초 후 자동 새로고침';
+            refreshIndicator.onclick = refreshPage;
+            document.body.appendChild(refreshIndicator);
+
+            setTimeout(refreshPage, 30000);
+            startAutoRefresh();
+        });
+
+        window.addEventListener('beforeunload', stopAutoRefresh);
+
+        // 토스트 메시지
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // 전체 선택
+        function toggleAll(checkbox) {
+            document.querySelectorAll('.retry-checkbox').forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        // 단일 작업 재시도
+        async function retrySingleTask(taskId) {
+            try {
+                const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': CSRF_TOKEN }
+                });
+                const data = await response.json();
+                showToast(data.message, data.success ? 'success' : 'error');
+                if (data.success) setTimeout(refreshPage, 1000);
+            } catch (error) {
+                showToast('작업 재시도 중 오류 발생', 'error');
+            }
+        }
+
+        // 단일 작업 실행
+        async function processSingleTask(taskId) {
+            try {
+                const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': CSRF_TOKEN }
+                });
+                const data = await response.json();
+                showToast(data.success ? '작업이 큐에 추가되었습니다.' : data.message, data.success ? 'success' : 'error');
+                if (data.success) setTimeout(refreshPage, 1000);
+            } catch (error) {
+                showToast('작업 실행 중 오류 발생', 'error');
+            }
+        }
+
+        // PENDING 모두 처리
+        async function processAllPending() {
+            if (!confirm('모든 PENDING 상태의 작업을 처리하시겠습니까?')) return;
+            
+            const checkboxes = document.querySelectorAll('input[type="checkbox"].retry-checkbox');
+            const checkboxesArray = Array.from(checkboxes);
+            const pendingTasks = checkboxesArray
+                .filter(cb => {
+                    const row = cb.closest('tr');
+                    const statusCell = row.querySelector('.status-badge');
+                    return statusCell && statusCell.classList.contains('status-pending');
+                })
+                .map(cb => cb.value);
+
+            if (pendingTasks.length === 0) {
+                showToast('처리할 PENDING 작업이 없습니다.', 'error');
+                return;
+            }
+
+            let success = 0, failed = 0;
+            for (const taskId of pendingTasks) {
+                try {
+                    const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': CSRF_TOKEN }
+                    });
+                    const data = await response.json();
+                    if (data.success) success++;
+                    else failed++;
+                } catch (error) {
+                    failed++;
+                }
+            }
+            showToast(`${success}개 성공, ${failed}개 실패`, success > 0 ? 'success' : 'error');
+            setTimeout(refreshPage, 1500);
+        }
+
+        // FAILED 재시도
+        async function retryFailedTasks() {
+            const checkboxes = document.querySelectorAll('.retry-checkbox:checked');
+            if (checkboxes.length === 0) {
+                showToast('재시도할 작업을 선택하세요.', 'error');
+                return;
+            }
+
+            const taskIds = Array.from(checkboxes).map(cb => cb.value);
+            let success = 0, failed = 0;
+
+            for (const taskId of taskIds) {
+                try {
+                    const response = await fetch(`/hts/tasks/queue/retry/${taskId}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': CSRF_TOKEN }
+                    });
+                    const data = await response.json();
+                    if (data.success) success++;
+                    else failed++;
+                } catch (error) {
+                    failed++;
+                }
+            }
+
+            showToast(`${success}개 성공, ${failed}개 실패`, success > 0 ? 'success' : 'error');
+            setTimeout(refreshPage, 1500);
+        }
+
+        // 큐 상태 확인
+        async function checkQueueStatus() {
+            const panel = document.getElementById('queue-status-panel');
+            panel.classList.toggle('active');
+
+            if (panel.classList.contains('active')) {
+                try {
+                    const response = await fetch('{% url "hts:celery_status" %}');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('queue-length').textContent = data.queue_length;
+                        document.getElementById('scheduled-count').textContent = data.scheduled_count;
+                        document.getElementById('pending-db').textContent = data.pending_db_count;
+                        document.getElementById('processing-db').textContent = data.processing_db_count;
+                    }
+                } catch (error) {
+                    showToast('큐 상태 조회 중 오류 발생', 'error');
+                }
+            }
+        }
+    </script>
+{% endblock %}

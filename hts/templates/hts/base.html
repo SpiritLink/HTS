@@ -88,6 +88,23 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
+        /* 보조 버튼 스타일 (메인으로 돌아가기 등) */
+        .btn-secondary {
+            background-color: #fff;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn-secondary:hover {
+            background-color: #f1f3f5;
+            color: #111;
+        }
+
         /* 메인으로 돌아가기 패널 */
         .back-panel {
             background: #f8f9fa;
@@ -100,6 +117,31 @@
         }
         .btn-back:hover {
             background: #5a6268;
+        }
+
+        /* 새로고침 버튼 스타일 (공통) */
+        .btn-refresh {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-refresh:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-refresh:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         /* 모바일 대응 */

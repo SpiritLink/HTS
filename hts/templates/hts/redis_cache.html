@@ -193,20 +193,6 @@
             background: #dc3545;
         }
 
-        /* 뒤로가기 링크 */
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: #6c757d;
-            text-decoration: none;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        .back-link:hover {
-            color: #111;
-        }
-
         /* 확인 다이얼로그 */
         .modal-overlay {
             position: fixed;
@@ -317,9 +303,10 @@
 
 {% block content %}
     <div class="container">
-        <a href="{% url 'hts:task_lookup' %}" class="back-link">← 작업 조회 메뉴로 돌아가기</a>
-        
-        <h1>⚡ Redis 캐시 조회</h1>
+        <h1 style="display: flex; justify-content: space-between; align-items: center;">
+            <span>⚡ Redis 캐시 조회</span>
+            <a href="{% url 'hts:task_lookup' %}" class="btn-secondary" style="font-size: 14px; padding: 8px 16px;">작업 조회 메뉴로 돌아가기</a>
+        </h1>
 
         <!-- 헤더 영역 -->
         <div class="header-actions">
@@ -333,7 +320,7 @@
                     <span id="selected-count" class="stat-value">0</span>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="loadCacheList()">
+            <button class="btn-refresh" onclick="loadCacheList()">
                 🔄 새로고침
             </button>
         </div>

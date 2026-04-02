@@ -87,17 +87,28 @@ def search_stocks(request):
     query = request.GET.get('q', '')
     market = request.GET.get('market', '')
     
+    from django.db.models import Q
+    
     stocks = Stock.objects.all()
     
     if query:
+        # 종목명으로만 검색 (종목코드 검색 제외)
         stocks = stocks.filter(name__icontains=query)
     
     if market:
-        stocks = stocks.filter(market=market)
+        # 시장 필터링 - stock_list.html과 동일한 로직
+        if market == 'KR':
+            stocks = stocks.filter(market__in=['KR', 'KOSPI'])
+        elif market == 'KQ':
+            stocks = stocks.filter(market__in=['KQ', 'KOSDAQ'])
+        elif market == 'US':
+            stocks = stocks.filter(market__in=['US', 'NASDAQ', 'NYSE', 'AMEX'])
+        else:
+            stocks = stocks.filter(market=market)
         
     results = [
         {'symbol': stock.symbol, 'name': stock.name, 'market': stock.market}
-        for stock in stocks
+        for stock in stocks[:20]  # 최대 20개 결과
     ]
     
     return JsonResponse({'results': results})
@@ -111,8 +122,14 @@ def stock_list_view(request):
     return render(request, 'hts/stock_list.html')
 
 
-def stock_search_page_view(request):
-    return render(request, 'hts/stock_search.html')
+def stock_chart_view(request, symbol):
+    """주식 차트 상세 페이지"""
+    from .models import Stock
+    try:
+        stock = Stock.objects.get(symbol=symbol)
+    except Stock.DoesNotExist:
+        stock = None
+    return render(request, 'hts/stock_chart.html', {'stock': stock, 'symbol': symbol})
 
 
 def dev_guide_view(request):

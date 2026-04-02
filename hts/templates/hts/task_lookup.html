@@ -1,13 +1,13 @@
 {% extends 'hts/base.html' %}
 
-{% block title %}작업 조회 - HTS{% endblock %}
+{% block title %}서버 작업 조회 - HTS{% endblock %}
 
 {% block head_extra %}{% csrf_token %}{% endblock %}
 
 {% block extra_css %}
         /* Redis 큐 상태 패널 */
         .redis-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             border-radius: 12px;
             padding: 25px;
             margin-bottom: 25px;
@@ -52,27 +52,24 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            margin-top: 15px;
         }
-        .btn-refresh {
-            background: rgba(255,255,255,0.9);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #764ba2;
-            cursor: pointer;
-            transition: all 0.2s;
+        /* btn-refresh 스타일은 base.html에서 상속 */
+
+        /* 자동 새로고침 버튼 스타일 오버라이드 */
+        .btn-auto {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         }
-        .btn-refresh:hover {
-            background: white;
-            transform: translateY(-2px);
+        .btn-auto:hover {
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
         }
-        .btn-refresh:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        .btn-stop {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
         }
+        .btn-stop:hover {
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+
         .last-updated {
             font-size: 12px;
             opacity: 0.8;
@@ -164,7 +161,10 @@
 
 {% block content %}
     <div class="container">
-        <h1>작업 조회 메뉴</h1>
+        <h1 style="display: flex; justify-content: space-between; align-items: center;">
+            <span>서버 작업 조회 메뉴</span>
+            <a href="{% url 'hts:index' %}" class="btn-secondary" style="font-size: 14px; padding: 8px 16px;">메인으로 돌아가기</a>
+        </h1>
 
         <!-- 1. Redis 큐 실시간 상태 -->
         <div class="redis-panel">
@@ -194,10 +194,10 @@
                 <button id="btn-refresh" class="btn-refresh" onclick="refreshRedisStatus()">
                     🔄 새로고침
                 </button>
-                <button class="btn-refresh" onclick="startAutoRefresh()" id="btn-auto">
+                <button class="btn-refresh btn-auto" onclick="startAutoRefresh()" id="btn-auto">
                     ▶️ 자동 새로고침 (5초)
                 </button>
-                <button class="btn-refresh" onclick="stopAutoRefresh()" id="btn-stop" style="display: none; background: #dc3545; color: white;">
+                <button class="btn-refresh btn-stop" onclick="stopAutoRefresh()" id="btn-stop" style="display: none;">
                     ⏸️ 정지
                 </button>
             </div>
@@ -232,12 +232,7 @@
             </a>
         </div>
 
-        <!-- 5. 메인으로 돌아가기 -->
-        <div class="menu-panel back-panel">
-            <a href="{% url 'hts:index' %}" class="btn-menu btn-back">
-                ← 메인으로 돌아가기
-            </a>
-        </div>
+
     </div>
 {% endblock %}
 
