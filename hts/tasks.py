@@ -117,7 +117,16 @@ def fetch_stock_data(self, request_id):
                 else:
                     hist = ticker.history(start=start_datetime, end=end_datetime, interval='1d')
             except Exception as e:
-                logger.warning(f"Yahoo Finance error for {yahoo_symbol}: {e}")
+                error_msg = str(e)
+                logger.warning(f"Yahoo Finance error for {yahoo_symbol}: {error_msg}")
+                
+                # Rate limit 오류 확인
+                if 'Too Many Requests' in error_msg or 'Rate limited' in error_msg:
+                    logger.error(f"[RATE_LIMIT] {symbol}: Rate limited by Yahoo Finance. Marking as FAILED.")
+                    fetch_request.status = 'FAILED'
+                    fetch_request.save()
+                    return  # 재시도하지 않고 종료
+                
                 hist = pd.DataFrame()
             
             # 시장 정보 확인
@@ -244,6 +253,15 @@ def fetch_stock_data(self, request_id):
         logger.exception(f"[ERROR] Request {request_id}: {exc}")
         try:
             fetch_request = DataFetchRequest.objects.get(id=request_id)
+            
+            # Rate limit 오류는 재시도하지 않음
+            error_str = str(exc)
+            if 'Too Many Requests' in error_str or 'Rate limited' in error_str:
+                logger.error(f"[RATE_LIMIT] Request {request_id}: Rate limited. Not retrying.")
+                fetch_request.status = 'FAILED'
+                fetch_request.save()
+                return  # 재시도하지 않음
+            
             fetch_request.status = 'FAILED'
             fetch_request.save()
         except DataFetchRequest.DoesNotExist:

@@ -426,6 +426,7 @@
 
         // 종목 정보 표시 업데이트
         function updateStockInfo(stock) {
+            currentStock = stock;  // 전역 변수에 저장
             const marketName = getMarketName(stock.market);
             document.getElementById('stock-market').textContent = marketName;
         }
@@ -661,9 +662,15 @@
             const changeEl = document.getElementById('price-change');
             const rateEl = document.getElementById('price-change-rate');
             
-            if (priceEl) priceEl.textContent = currentPrice.toLocaleString() + '원';
+            // 시장별 통화 기호 설정
+            const market = currentStock ? currentStock.market : '{{ stock.market|default:"KR" }}';
+            const marketUpper = market.toUpperCase();
+            const isKorean = marketUpper === 'KR' || marketUpper === 'KOSPI' || marketUpper === 'KQ' || marketUpper === 'KOSDAQ';
+            const currencySymbol = isKorean ? '₩' : '$';
+            
+            if (priceEl) priceEl.textContent = currencySymbol + currentPrice.toLocaleString();
             if (changeEl) {
-                changeEl.textContent = (change >= 0 ? '▲ ' : '▼ ') + Math.abs(change).toLocaleString() + '원';
+                changeEl.textContent = (change >= 0 ? '▲ ' : '▼ ') + currencySymbol + Math.abs(change).toLocaleString();
                 changeEl.className = 'price-change ' + (change >= 0 ? 'up' : 'down');
             }
             if (rateEl) {
@@ -784,6 +791,18 @@
                 }
             }
             
+            // Y축 최소/최대값 계산 (여백 5% 추가)
+            let minPrice = Infinity;
+            let maxPrice = -Infinity;
+            displayData.forEach(d => {
+                if (d.low_price < minPrice) minPrice = d.low_price;
+                if (d.high_price > maxPrice) maxPrice = d.high_price;
+            });
+            const priceRange = maxPrice - minPrice;
+            const padding = priceRange * 0.05 || maxPrice * 0.02; // 5% 여백
+            const yMin = Math.max(0, minPrice - padding);
+            const yMax = maxPrice + padding;
+            
             const upColor = '#e31b23';
             const downColor = '#2179f5';
             
@@ -796,8 +815,25 @@
                     
                     ctx.save();
                     
+                    // 차트 영역으로 클리핑 설정
+                    ctx.beginPath();
+                    ctx.rect(chart.chartArea.left, chart.chartArea.top, chart.chartArea.width, chart.chartArea.height);
+                    ctx.clip();
+                    
+                    // 캔들 너비 계산 (여백 고려)
+                    const candleWidth = Math.min(
+                        Math.max(xAxis.width / displayData.length * 0.6, 2),
+                        xAxis.width / displayData.length - 2
+                    );
+                    
                     displayData.forEach((item, index) => {
                         const x = xAxis.getPixelForValue(index);
+                        
+                        // 차트 영역 내에서만 그리기
+                        if (x < chart.chartArea.left - candleWidth || x > chart.chartArea.right + candleWidth) {
+                            return;
+                        }
+                        
                         const open = yAxis.getPixelForValue(item.open_price);
                         const close = yAxis.getPixelForValue(item.close_price);
                         const high = yAxis.getPixelForValue(item.high_price);
@@ -810,10 +846,11 @@
                         
                         const bodyHeight = Math.abs(close - open);
                         const bodyTop = Math.min(open, close);
-                        const candleWidth = Math.max(xAxis.width / displayData.length * 0.7, 3);
                         
+                        // 캔들 몸통 그리기
                         ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight || 1);
                         
+                        // 위아래 꼬리 그리기
                         ctx.beginPath();
                         ctx.moveTo(x, high);
                         ctx.lineTo(x, bodyTop);
@@ -868,11 +905,14 @@
                     },
                     scales: {
                         x: {
+                            offset: true,
                             grid: { display: false },
                             ticks: { font: { size: 11 }, maxTicksLimit: 8, color: '#666' }
                         },
                         y: {
                             position: 'right',
+                            min: yMin,
+                            max: yMax,
                             grid: { color: '#f0f0f0' },
                             ticks: { font: { size: 11 }, color: '#666', callback: (value) => value.toLocaleString() }
                         }
