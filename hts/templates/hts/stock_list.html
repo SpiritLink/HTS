@@ -473,7 +473,8 @@
                         chartLoader.style.display = 'none';
                         canvasElement.style.display = 'block';
                         const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                        renderChart(sortedData, currentStock.name);
+                        const interval = data.interval || '1d';
+                        renderChart(sortedData, currentStock.name, interval);
                         
                         if (data.status === 'partial' && data.missing_data) {
                             const modalContent = document.querySelector('.modal-content');
@@ -547,16 +548,69 @@
             }
         });
 
-        function renderChart(priceData, stockName) {
+        // Chart.js 렌더링 함수 (개선된 버전)
+        function renderChart(priceData, stockName, interval = '1d') {
             const ctx = document.getElementById('priceChart').getContext('2d');
+            const dataCount = priceData.length;
+            
+            // 데이터 양에 따른 포인트 크기 조정
+            const pointRadius = dataCount > 100 ? 0 : (dataCount > 50 ? 1 : 2);
+            const pointHoverRadius = dataCount > 100 ? 3 : 4;
+            
+            // X축 라벨 포맷 설정 (interval에 따라)
+            function formatLabel(timestamp, interval) {
+                const date = new Date(timestamp);
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                
+                if (interval === '1d') {
+                    // 일별: MM/DD
+                    return `${month}/${day}`;
+                } else if (interval === '1h') {
+                    // 시간별: MM/DD HH:00
+                    return `${month}/${day} ${hours}:00`;
+                } else {
+                    // 분 단위: MM/DD HH:MM
+                    return `${month}/${day} ${hours}:${minutes}`;
+                }
+            }
+            
+            // maxTicksLimit 설정 (interval과 데이터 양에 따라)
+            function getMaxTicksLimit(interval, dataCount) {
+                if (interval === '1d') {
+                    return dataCount > 30 ? 8 : 12;
+                } else if (interval === '1h') {
+                    return dataCount > 100 ? 6 : 10;
+                } else {
+                    return dataCount > 200 ? 4 : 8;
+                }
+            }
 
-            const labels = priceData.map(item => {
-                const date = new Date(item.timestamp);
-                return `${date.getMonth() + 1}/${date.getDate()}`;
-            });
+            const labels = priceData.map(item => formatLabel(item.timestamp, interval));
+            const maxTicksLimit = getMaxTicksLimit(interval, dataCount);
 
+            // 색상: 상승 빨간색, 하띡 파란색 (더 선명하게)
             const colors = priceData.map(item => {
-                return item.close_price >= item.open_price ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
+                if (item.close_price > item.open_price) {
+                    return '#ef4444'; // 빨간색 (상승)
+                } else if (item.close_price < item.open_price) {
+                    return '#3b82f6'; // 파란색 (하띡)
+                } else {
+                    return '#9ca3af'; // 회색 (보합)
+                }
+            });
+            
+            // 배경색 (투명도 적용)
+            const bgColors = priceData.map(item => {
+                if (item.close_price > item.open_price) {
+                    return 'rgba(239, 68, 68, 0.3)';
+                } else if (item.close_price < item.open_price) {
+                    return 'rgba(59, 130, 246, 0.3)';
+                } else {
+                    return 'rgba(156, 163, 175, 0.3)';
+                }
             });
 
             const barData = priceData.map(item => {
@@ -575,23 +629,25 @@
                             type: 'bar',
                             label: '최저가 ~ 최고가',
                             data: barData,
-                            backgroundColor: colors,
+                            backgroundColor: bgColors,
                             borderColor: colors,
                             borderWidth: 1,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
+                            barPercentage: 0.7,
+                            categoryPercentage: 0.9
                         },
                         {
                             type: 'line',
                             label: '종가 (Close Price)',
                             data: closePrices,
-                            borderColor: '#343a40',
-                            borderWidth: 2,
-                            pointRadius: 2,
+                            borderColor: '#1f2937',
+                            borderWidth: 1.5,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointHoverRadius,
                             pointBackgroundColor: '#fff',
-                            pointBorderColor: '#343a40',
+                            pointBorderColor: '#1f2937',
+                            pointBorderWidth: 1,
                             fill: false,
-                            tension: 0.1
+                            tension: 0
                         }
                     ]
                 },
@@ -613,6 +669,15 @@
                         },
                         tooltip: {
                             callbacks: {
+                                title: function(context) {
+                                    const item = priceData[context[0].dataIndex];
+                                    const date = new Date(item.timestamp);
+                                    if (interval === '1d') {
+                                        return date.toLocaleDateString('ko-KR');
+                                    } else {
+                                        return date.toLocaleString('ko-KR');
+                                    }
+                                },
                                 label: function(context) {
                                     if (context.datasetIndex === 0) {
                                         const low = context.raw[0].toLocaleString();
@@ -627,7 +692,12 @@
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 10 }, maxTicksLimit: 8 }
+                            ticks: { 
+                                font: { size: 10 }, 
+                                maxTicksLimit: maxTicksLimit,
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
                         },
                         y: {
                             beginAtZero: false,

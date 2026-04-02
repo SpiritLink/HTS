@@ -499,10 +499,18 @@ class StockSymbolPriceRangeAPIView(APIView):
 
         serializer = StockPriceSerializer(prices, many=True)
         
+        # interval 정보 추출 (데이터가 있으면 첫 번째 데이터의 interval 사용)
+        interval = '1d'
+        if prices.exists():
+            first_price = prices.first()
+            if hasattr(first_price, 'interval') and first_price.interval:
+                interval = first_price.interval
+        
         response_data = {
             "status": "success",
             "message": f"Stock prices for {symbol} retrieved successfully",
             "period": f"{start_date} to {end_date}",
+            "interval": interval,
             "count": prices.count(),
             "data": serializer.data
         }
