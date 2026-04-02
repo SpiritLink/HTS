@@ -14,6 +14,78 @@
         .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 6px 12px; border-radius: 6px; font-size: 13px; text-decoration: none; transition: all 0.2s; cursor: pointer; white-space: nowrap; }
         .btn-secondary:hover:not(:disabled) { background-color: #f1f3f5; color: #111; }
         .btn-secondary:disabled { background-color: #e9ecef; color: #adb5bd; cursor: not-allowed; border-color: #dee2e6; }
+        
+        .btn-primary { background-color: #004ea2; color: #fff; border: 1px solid #004ea2; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: #003a79; }
+
+        /* 날짜 선택 영역 스타일 */
+        .date-filter-container {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .date-filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .date-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .date-input-wrapper {
+            flex: 1;
+            min-width: 130px;
+        }
+        .date-input-wrapper label {
+            display: block;
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        .date-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+        .date-input:focus { border-color: #004ea2; box-shadow: 0 0 0 2px rgba(0, 78, 162, 0.15); }
+        .date-separator {
+            color: #6c757d;
+            font-size: 14px;
+            padding: 20px 0 0 0;
+        }
+        .date-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .preset-btn {
+            background-color: #fff;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .preset-btn:hover {
+            background-color: #004ea2;
+            color: #fff;
+            border-color: #004ea2;
+        }
 
         /* 테이블 래퍼 (가로 스크롤 허용) */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 20px; }
@@ -30,7 +102,7 @@
         /* 열 너비 조절 및 스타일 */
         .table-krds th:first-child, .table-krds td:first-child { width: 15%; color: #6c757d; font-weight: normal; }
         .table-krds td:nth-child(2) { font-weight: 600; color: #111; }
-        .table-krds td:nth-child(3) { text-align: left; } /* 종목명은 좌측 정렬이 모바일에서 읽기 편함 */
+        .table-krds td:nth-child(3) { text-align: left; }
 
         .empty-msg { text-align: center; padding: 40px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px; display: none; font-size: 14px; }
         .loader { text-align: center; padding: 30px; color: #666; font-size: 14px; }
@@ -43,7 +115,7 @@
         /* 모달 (차트 팝업) 스타일 */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: #fff; width: 100%; max-width: 800px; max-height: 90vh; border-radius: 12px; padding: 20px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
+        .modal-content { background: #fff; width: 100%; max-width: 800px; max-height: 90vh; border-radius: 12px; padding: 20px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; overflow-y: auto; }
         .modal-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; color: #6c757d; transition: color 0.2s; padding: 0; }
         .modal-close-btn:hover { color: #111; }
 
@@ -61,6 +133,9 @@
             .table-krds th, .table-krds td { font-size: 13px; padding: 10px 5px; }
             .market-badge { font-size: 10px; padding: 2px 6px; }
             .result-header h2 { font-size: 18px; }
+            .date-inputs { flex-direction: column; align-items: stretch; }
+            .date-separator { text-align: center; padding: 5px 0; }
+            .date-input-wrapper { min-width: auto; }
         }
     </style>
 </head>
@@ -70,6 +145,29 @@
             <span>종목 전체 목록</span>
             <a href="{% url 'hts:info_lookup' %}" class="btn-secondary" style="display: inline-block;">뒤로가기</a>
         </h1>
+
+        <!-- 날짜 선택 영역 -->
+        <div class="date-filter-container">
+            <span class="date-filter-label">📅 조회 기간 선택</span>
+            <div class="date-inputs">
+                <div class="date-input-wrapper">
+                    <label for="start-date">시작일</label>
+                    <input type="date" id="start-date" class="date-input">
+                </div>
+                <span class="date-separator">~</span>
+                <div class="date-input-wrapper">
+                    <label for="end-date">종료일</label>
+                    <input type="date" id="end-date" class="date-input">
+                </div>
+            </div>
+            <div class="date-presets">
+                <button class="preset-btn" onclick="setPresetDate(7)">1주일</button>
+                <button class="preset-btn" onclick="setPresetDate(30)">1개월</button>
+                <button class="preset-btn" onclick="setPresetDate(90)">3개월</button>
+                <button class="preset-btn" onclick="setPresetDate(180)">6개월</button>
+                <button class="preset-btn" onclick="setPresetDate(365)">1년</button>
+            </div>
+        </div>
 
         <div id="loader" class="loader">데이터를 불러오는 중입니다...</div>
 
@@ -110,7 +208,25 @@
                 <p>종목 심볼: <strong id="modal-symbol"></strong></p>
             </div>
 
-            <h3 style="font-size: 15px; margin-bottom: 10px; text-align: center; color: #333;">최근 1달 주가 추이</h3>
+            <!-- 모달 내 날짜 선택 -->
+            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 11px; color: #6c757d; display: block; margin-bottom: 3px;">시작일</label>
+                        <input type="date" id="modal-start-date" class="date-input" style="padding: 8px;">
+                    </div>
+                    <span style="color: #6c757d; padding-top: 18px;">~</span>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-size: 11px; color: #6c757d; display: block; margin-bottom: 3px;">종료일</label>
+                        <input type="date" id="modal-end-date" class="date-input" style="padding: 8px;">
+                    </div>
+                    <button class="btn-primary" onclick="refreshChartWithNewDate()" style="margin-top: 16px; padding: 8px 16px; font-size: 13px;">
+                        조회
+                    </button>
+                </div>
+            </div>
+
+            <h3 id="chart-title" style="font-size: 15px; margin-bottom: 10px; text-align: center; color: #333;">주가 추이</h3>
             <div id="chart-loader" class="loader">주가 데이터를 불러오는 중입니다...</div>
             <div class="chart-container">
                 <canvas id="priceChart"></canvas>
@@ -119,17 +235,43 @@
     </div>
 
     <script>
-        // 전역 변수로 데이터와 페이징 상태 관리
+        // 전역 변수
         let allStocks = [];
         let currentPage = 1;
-        const itemsPerPage = 10; // 한 페이지에 보여줄 항목 수
+        const itemsPerPage = 10;
+        let priceChartInstance = null;
+        let currentStock = null;
 
-        let priceChartInstance = null; // 차트 인스턴스
-
+        // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            initDefaultDates();
             fetchData();
         });
 
+        // 기본 날짜 설정 (최근 1달)
+        function initDefaultDates() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            const endDateStr = endDate.toISOString().split('T')[0];
+            const startDateStr = startDate.toISOString().split('T')[0];
+
+            document.getElementById('end-date').value = endDateStr;
+            document.getElementById('start-date').value = startDateStr;
+        }
+
+        // 프리셋 버튼 클릭 시 날짜 설정
+        function setPresetDate(days) {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+        }
+
+        // 종목 목록 가져오기
         function fetchData() {
             const loader = document.getElementById('loader');
             const emptyMsg = document.getElementById('empty-msg');
@@ -139,9 +281,9 @@
                 .then(data => {
                     loader.style.display = 'none';
                     if (data.status === 'success' && data.data && data.data.length > 0) {
-                        allStocks = data.data; // 전체 데이터 저장
-                        currentPage = 1;       // 페이지 초기화
-                        renderTable();         // 테이블 렌더링
+                        allStocks = data.data;
+                        currentPage = 1;
+                        renderTable();
                     } else {
                         emptyMsg.style.display = 'block';
                     }
@@ -152,33 +294,27 @@
                 });
         }
 
+        // 테이블 렌더링
         function renderTable() {
             const table = document.getElementById('stocks-table');
             const tbody = document.getElementById('stocks-tbody');
             const pagination = document.getElementById('pagination-controls');
 
-            tbody.innerHTML = ''; // 기존 내용 지우기
+            tbody.innerHTML = '';
 
-            // 전체 페이지 수 계산
             const totalPages = Math.ceil(allStocks.length / itemsPerPage);
 
-            // 현재 페이지가 범위를 벗어나지 않도록 보정
             if (currentPage < 1) currentPage = 1;
             if (currentPage > totalPages) currentPage = totalPages;
 
-            // 현재 페이지에 표시할 데이터 범위 계산
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
             const currentData = allStocks.slice(startIndex, endIndex);
 
-            // 데이터 행 생성
             currentData.forEach((stock, index) => {
                 const tr = document.createElement('tr');
-
-                // 클릭 시 모달 열기 이벤트 추가
                 tr.addEventListener('click', () => openModalAndFetchChart(stock));
 
-                // 전체 데이터 기준 순번 계산: (startIndex + 현재배열인덱스 + 1)
                 const serialNumber = startIndex + index + 1;
 
                 tr.innerHTML = `
@@ -192,16 +328,12 @@
 
             table.classList.add('active');
 
-            // 페이징 컨트롤 업데이트
             if (allStocks.length > itemsPerPage) {
                 pagination.classList.add('active');
                 document.getElementById('page-info').innerText = `${currentPage} / ${totalPages}`;
-
-                // 버튼 활성/비활성 처리
                 document.getElementById('btn-prev').disabled = (currentPage === 1);
                 document.getElementById('btn-next').disabled = (currentPage === totalPages);
             } else {
-                // 항목이 1페이지 분량 이하이면 페이징 숨김
                 pagination.classList.remove('active');
             }
         }
@@ -211,23 +343,37 @@
             renderTable();
         }
 
-        // ---- 모달 및 차트 렌더링 로직 ---- //
-
+        // 모달 열기 및 차트 데이터 로드
         function openModalAndFetchChart(stock) {
+            currentStock = stock;
             const modal = document.getElementById('chart-modal');
-            const chartLoader = document.getElementById('chart-loader');
-            const canvasElement = document.getElementById('priceChart');
 
-            // 모달 열기
             modal.classList.add('active');
-
-            // 모달이 열릴 때 body 스크롤 방지 (모바일 사용성 개선)
             document.body.style.overflow = 'hidden';
 
             // 헤더 정보 세팅
             document.getElementById('modal-market').textContent = stock.market;
             document.getElementById('modal-name').textContent = stock.name;
             document.getElementById('modal-symbol').textContent = stock.symbol;
+
+            // 모달 날짜 입력에 현재 선택된 날짜 설정
+            document.getElementById('modal-start-date').value = document.getElementById('start-date').value;
+            document.getElementById('modal-end-date').value = document.getElementById('end-date').value;
+
+            // 차트 로드
+            loadChartData();
+        }
+
+        // 차트 데이터 로드
+        function loadChartData() {
+            const chartLoader = document.getElementById('chart-loader');
+            const canvasElement = document.getElementById('priceChart');
+            const startDateStr = document.getElementById('modal-start-date').value;
+            const endDateStr = document.getElementById('modal-end-date').value;
+
+            // 기존 알림 제거
+            const existingNotice = document.querySelector('.missing-data-notice');
+            if (existingNotice) existingNotice.remove();
 
             if (priceChartInstance) {
                 priceChartInstance.destroy();
@@ -237,71 +383,48 @@
             chartLoader.style.display = 'block';
             chartLoader.textContent = "주가 데이터를 불러오는 중입니다...";
 
-            // 날짜 계산 (최근 1달) - YYYY-MM-DD 포맷
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(startDate.getMonth() - 1);
+            // 차트 제목 업데이트
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            document.getElementById('chart-title').textContent = `${startDateStr} ~ ${endDateStr} (${diffDays}일)`;
 
-            const endDateStr = endDate.toISOString().split('T')[0];
-            const startDateStr = startDate.toISOString().split('T')[0];
-
-            // API 호출 (새로운 API 엔드포인트 사용)
-            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_date=${startDateStr}&end_date=${endDateStr}`)
+            // API 호출
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(currentStock.symbol)}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}`)
                 .then(response => response.json())
                 .then(data => {
                     if ((data.status === 'success' || data.status === 'partial') && data.data && data.data.length > 0) {
-                        // 데이터 있음 - 차트 렌더링
                         chartLoader.style.display = 'none';
                         canvasElement.style.display = 'block';
                         const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                        renderChart(sortedData, stock.name);
+                        renderChart(sortedData, currentStock.name);
                         
-                        // 누락된 데이터가 있는 경우 모달 내에 알림 표시
                         if (data.status === 'partial' && data.missing_data) {
                             const modalContent = document.querySelector('.modal-content');
-                            // 기존 알림이 있으면 제거
-                            const existingNotice = modalContent.querySelector('.missing-data-notice');
-                            if (existingNotice) existingNotice.remove();
-                            
                             const missingNotice = document.createElement('div');
                             missingNotice.className = 'missing-data-notice';
                             missingNotice.style.cssText = 'margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 12px; color: #856404; text-align: center;';
-                            missingNotice.innerHTML = `
-                                <strong>⚠️ 일부 데이터 누락</strong> - ${data.missing_data.message}
-                            `;
+                            missingNotice.innerHTML = `<strong>⚠️ 일부 데이터 누락</strong> - ${data.missing_data.message}`;
                             modalContent.appendChild(missingNotice);
                         }
                     } else if (data.status === 'pending') {
-                        // 이미 큐에 있음 - 적재 중 메시지
                         canvasElement.style.display = 'none';
                         chartLoader.style.display = 'block';
                         chartLoader.innerHTML = `
-                            <div style="color: #004ea2; font-weight: bold; margin-bottom: 8px;">
-                                ⏳ 데이터 적재 중
-                            </div>
-                            <div style="font-size: 13px; color: #666;">
-                                ${data.message}<br>
-                                <small>잠시 후 다시 조회해 주세요.</small>
-                            </div>
+                            <div style="color: #004ea2; font-weight: bold; margin-bottom: 8px;">⏳ 데이터 적재 중</div>
+                            <div style="font-size: 13px; color: #666;">${data.message}<br><small>잠시 후 다시 조회해 주세요.</small></div>
                         `;
                     } else if (data.status === 'accepted') {
-                        // 새로 큐에 추가됨 - 요청 완료 메시지
                         canvasElement.style.display = 'none';
                         chartLoader.style.display = 'block';
                         chartLoader.innerHTML = `
-                            <div style="color: #28a745; font-weight: bold; margin-bottom: 8px;">
-                                ✅ 데이터 요청 완룛
-                            </div>
-                            <div style="font-size: 13px; color: #666;">
-                                ${data.message}<br>
-                                <small>주가 정보를 가져오는 중입니다. 잠시 후 다시 조회해 주세요.</small>
-                            </div>
+                            <div style="color: #28a745; font-weight: bold; margin-bottom: 8px;">✅ 데이터 요청 완료</div>
+                            <div style="font-size: 13px; color: #666;">${data.message}<br><small>주가 정보를 가져오는 중입니다. 잠시 후 다시 조회해 주세요.</small></div>
                         `;
                     } else {
-                        // 기타 상황
-                        renderChart([], stock.name);
+                        renderChart([], currentStock.name);
                         chartLoader.style.display = 'block';
-                        chartLoader.textContent = "최근 1달간의 주가 데이터가 없습니다.";
+                        chartLoader.textContent = "해당 기간의 주가 데이터가 없습니다.";
                     }
                 })
                 .catch(error => {
@@ -309,24 +432,39 @@
                     canvasElement.style.display = 'none';
                     chartLoader.style.display = 'block';
                     chartLoader.innerHTML = `
-                        <div style="color: #dc3545; font-weight: bold; margin-bottom: 8px;">
-                            ❌ 오류 발생
-                        </div>
-                        <div style="font-size: 13px; color: #666;">
-                            주가 데이터를 불러오는 중 오류가 발생했습니다.<br>
-                            <small>나중에 다시 시도해 주세요.</small>
-                        </div>
+                        <div style="color: #dc3545; font-weight: bold; margin-bottom: 8px;">❌ 오류 발생</div>
+                        <div style="font-size: 13px; color: #666;">주가 데이터를 불러오는 중 오류가 발생했습니다.<br><small>나중에 다시 시도해 주세요.</small></div>
                     `;
                 });
         }
 
+        // 모달에서 날짜 변경 후 다시 조회
+        function refreshChartWithNewDate() {
+            const modalStartDate = document.getElementById('modal-start-date').value;
+            const modalEndDate = document.getElementById('modal-end-date').value;
+
+            if (!modalStartDate || !modalEndDate) {
+                alert('시작일과 종료일을 모두 선택해주세요.');
+                return;
+            }
+
+            if (new Date(modalStartDate) > new Date(modalEndDate)) {
+                alert('시작일은 종료일보다 이전이어야 합니다.');
+                return;
+            }
+
+            // 메인 페이지의 날짜도 동기화
+            document.getElementById('start-date').value = modalStartDate;
+            document.getElementById('end-date').value = modalEndDate;
+
+            loadChartData();
+        }
+
         function closeModal() {
             document.getElementById('chart-modal').classList.remove('active');
-            // 모달 닫힐 때 body 스크롤 복구
             document.body.style.overflow = '';
         }
 
-        // 모달 바깥 영역 클릭 시 닫기
         document.getElementById('chart-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
@@ -341,19 +479,16 @@
                 return `${date.getMonth() + 1}/${date.getDate()}`;
             });
 
-            // 빨간색(상승), 파란색(하락)
             const colors = priceData.map(item => {
                 return item.close_price >= item.open_price ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
             });
 
-            // Floating Bar Chart [최저가, 최고가]
             const barData = priceData.map(item => {
                 const low = item.low_price !== null ? item.low_price : item.close_price;
                 const high = item.high_price !== null ? item.high_price : item.close_price;
                 return [low, high];
             });
 
-            // 종가 연결 선
             const closePrices = priceData.map(item => item.close_price);
 
             priceChartInstance = new Chart(ctx, {
@@ -376,7 +511,7 @@
                             data: closePrices,
                             borderColor: '#343a40',
                             borderWidth: 2,
-                            pointRadius: 2, // 모바일에서 점 크기 약간 축소
+                            pointRadius: 2,
                             pointBackgroundColor: '#fff',
                             pointBorderColor: '#343a40',
                             fill: false,
@@ -406,7 +541,7 @@
                                     if (context.datasetIndex === 0) {
                                         const low = context.raw[0].toLocaleString();
                                         const high = context.raw[1].toLocaleString();
-                                        return `범위: ${low} ~ ${high}원`; // 모바일 대응 텍스트 축소
+                                        return `범위: ${low} ~ ${high}원`;
                                     }
                                     return `종가: ${context.raw.toLocaleString()}원`;
                                 }
@@ -416,7 +551,7 @@
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 10 }, maxTicksLimit: 8 } // 모바일에서 x축 라벨 겹침 방지
+                            ticks: { font: { size: 10 }, maxTicksLimit: 8 }
                         },
                         y: {
                             beginAtZero: false,

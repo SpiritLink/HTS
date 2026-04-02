@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가격 조회 큐 조회 - HTS</title>
+    <style>
+        body { 
+            font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+            background-color: #f4f6f9; 
+            color: #333; 
+            margin: 0; 
+            padding: 20px 10px; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            box-sizing: border-box; 
+        }
+        h1 { 
+            margin-top: 0; 
+            font-size: 24px; 
+            color: #111; 
+            letter-spacing: -0.5px; 
+            border-bottom: 2px solid #111; 
+            padding-bottom: 15px; 
+            margin-bottom: 25px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-secondary { 
+            background-color: #fff; 
+            color: #495057; 
+            border: 1px solid #ced4da; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            text-decoration: none; 
+            transition: all 0.2s; 
+            cursor: pointer;
+        }
+        .btn-secondary:hover { 
+            background-color: #f1f3f5; 
+            color: #111; 
+        }
+
+        .filter-container {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-label {
+            font-size: 13px;
+            color: #495057;
+            font-weight: 600;
+        }
+        .filter-select, .filter-input {
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .btn-filter {
+            background-color: #6f42c1;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn-filter:hover {
+            background-color: #5a32a3;
+        }
+        .btn-reset {
+            background-color: #6c757d;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        .table-krds {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+        .table-krds th, .table-krds td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+        .table-krds th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #111;
+            border-top: 2px solid #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table-krds tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-processing { background-color: #17a2b8; color: #fff; }
+        .status-completed { background-color: #28a745; color: #fff; }
+        .status-failed { background-color: #dc3545; color: #fff; }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pagination a, .pagination span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .pagination a:hover {
+            background-color: #f1f3f5;
+            border-color: #adb5bd;
+        }
+        .pagination .current {
+            background-color: #6f42c1;
+            color: #fff;
+            border-color: #6f42c1;
+            font-weight: bold;
+        }
+        .pagination .disabled {
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .summary-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-card {
+            flex: 1;
+            min-width: 140px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .summary-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 60px 20px;
+            color: #777;
+        }
+        .empty-msg-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+            h1 { font-size: 20px; }
+            .table-krds th, .table-krds td { font-size: 12px; padding: 8px 6px; }
+            .filter-container { flex-direction: column; align-items: stretch; }
+            .filter-group { width: 100%; }
+        }
+    </style>
+    <script>
+        // 페이지 새로고침 함수
+        function refreshPage() {
+            // 현재 URL 유지하면서 새로고침
+            window.location.reload();
+        }
+
+        // 자동 새로고침 설정 (30초 매월)
+        let autoRefreshInterval;
+        
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(function() {
+                refreshPage();
+            }, 30000); // 30초
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // 페이지 로드 시 자동 새로고침 시작
+        document.addEventListener('DOMContentLoaded', function() {
+            // 새로고침 간격 물언보기 표시
+            const refreshIndicator = document.createElement('div');
+            refreshIndicator.id = 'refresh-indicator';
+            refreshIndicator.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
+            refreshIndicator.innerHTML = '⏲️ 30초 후 자동 새로고침';
+            refreshIndicator.onclick = function() {
+                refreshPage();
+            };
+            document.body.appendChild(refreshIndicator);
+
+            // 30초 후 자동 새로고침
+            setTimeout(function() {
+                refreshPage();
+            }, 30000);
+
+            // 마우스 움직임 감지 시 새로고침 지연
+            let mouseTimeout;
+            document.addEventListener('mousemove', function() {
+                clearTimeout(mouseTimeout);
+                document.getElementById('refresh-indicator').style.display = 'block';
+                mouseTimeout = setTimeout(function() {
+                    // 마우스 5초 간 움직이면 새로고침 지연
+                }, 5000);
+            });
+        });
+
+        // 페이지 를 떠날 때 자동 새로고침 정지
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>가격 조회 큐 조회</span>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="refreshPage()" class="btn-secondary" style="border-color: #28a745; color: #28a745;">
+                    🔄 새로고침
+                </button>
+                <a href="{% url 'hts:task_lookup' %}" class="btn-secondary">뒤로가기</a>
+            </div>
+        </h1>
+
+        <div class="summary-container">
+            <div class="summary-card">
+                <div class="summary-count">{{ total_count }}</div>
+                <div class="summary-label">총 요청 수</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-count" style="color: #ffc107;">{{ pending_count }}</div>
+                <div class="summary-label">PENDING (대기중)</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-count" style="color: #17a2b8;">{{ processing_count }}</div>
+                <div class="summary-label">PROCESSING (처리중)</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-count" style="color: #28a745;">{{ completed_count }}</div>
+                <div class="summary-label">COMPLETED (완료)</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-count" style="color: #dc3545;">{{ failed_count }}</div>
+                <div class="summary-label">FAILED (실패)</div>
+            </div>
+        </div>
+
+        <form method="get" class="filter-container">
+            <div class="filter-group">
+                <label class="filter-label">상태:</label>
+                <select name="status" class="filter-select">
+                    <option value="" {% if not current_status %}selected{% endif %}>전체</option>
+                    <option value="PENDING" {% if current_status == 'PENDING' %}selected{% endif %}>PENDING</option>
+                    <option value="PROCESSING" {% if current_status == 'PROCESSING' %}selected{% endif %}>PROCESSING</option>
+                    <option value="COMPLETED" {% if current_status == 'COMPLETED' %}selected{% endif %}>COMPLETED</option>
+                    <option value="FAILED" {% if current_status == 'FAILED' %}selected{% endif %}>FAILED</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">종목코드:</label>
+                <input type="text" name="symbol" class="filter-input" value="{{ current_symbol|default:'' }}" placeholder="예: 005930">
+            </div>
+            <div class="filter-group" style="margin-left: auto;">
+                <button type="submit" class="btn-filter">필터 적용</button>
+                <a href="{% url 'hts:task_queue_list' %}" class="btn-reset">초기화</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table-krds">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>심볼</th>
+                        <th>시작일</th>
+                        <th>종료일</th>
+                        <th>상태</th>
+                        <th>요청일시</th>
+                        <th>업데이트</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.id }}</td>
+                        <td><strong>{{ task.symbol }}</strong></td>
+                        <td>{{ task.start_date }}</td>
+                        <td>{{ task.end_date }}</td>
+                        <td>
+                            <span class="status-badge status-{{ task.status|lower }}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ task.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ task.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-msg">
+                                <div class="empty-msg-icon">📭</div>
+                                <div>요청이 없습니다.</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if tasks.has_other_pages %}
+        <div class="pagination">
+            {% if tasks.has_previous %}
+                <a href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">« 처음</a>
+                <a href="?page={{ tasks.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">‹ 이전</a>
+            {% else %}
+                <span class="disabled">« 처음</span>
+                <span class="disabled">‹ 이전</span>
+            {% endif %}
+
+            {% for num in page_range %}
+                {% if num == tasks.number %}
+                    <span class="current">{{ num }}</span>
+                {% elif num == '...' %}
+                    <span>...</span>
+                {% else %}
+                    <a href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if tasks.has_next %}
+                <a href="?page={{ tasks.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">다음 ›</a>
+                <a href="?page={{ tasks.paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_symbol %}&symbol={{ current_symbol }}{% endif %}">마지막 »</a>
+            {% else %}
+                <span class="disabled">다음 ›</span>
+                <span class="disabled">마지막 »</span>
+            {% endif %}
+        </div>
+        <div style="text-align: center; margin-top: 10px; color: #6c757d; font-size: 13px;">
+            총 {{ tasks.paginator.count }}개 요청 중 {{ tasks.start_index }} - {{ tasks.end_index }} 표시
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

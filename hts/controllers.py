@@ -2,8 +2,9 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .services import get_user_portfolio
-from .models import User, Stock
+from .models import User, Stock, DataFetchRequest
 
 def index(request):
     return render(request, 'hts/index.html')
@@ -100,3 +101,69 @@ def stock_search_page_view(request):
 
 def dev_guide_view(request):
     return render(request, 'hts/dev_guide.html')
+
+def task_lookup_view(request):
+    """작업 조회 메인 페이지"""
+    return render(request, 'hts/task_lookup.html')
+
+def task_queue_list_view(request):
+    """가격 조회 큐 조회 페이지 (페이지네이션)"""
+    # 필터 파라미터 받기
+    status_filter = request.GET.get('status', '')
+    symbol_filter = request.GET.get('symbol', '')
+    
+    # 기본 쿼리셋
+    tasks = DataFetchRequest.objects.all().order_by('-created_at')
+    
+    # 필터 적용
+    if status_filter:
+        tasks = tasks.filter(status=status_filter)
+    if symbol_filter:
+        tasks = tasks.filter(symbol__icontains=symbol_filter)
+    
+    # 페이지네이션 설정 (페이지당 10개)
+    paginator = Paginator(tasks, 10)
+    page = request.GET.get('page', 1)
+    
+    try:
+        tasks_page = paginator.page(page)
+    except PageNotAnInteger:
+        tasks_page = paginator.page(1)
+    except EmptyPage:
+        tasks_page = paginator.page(paginator.num_pages)
+    
+    # 페이지 범위 계산 (현재 페이지 주변 2페이지씩 표시)
+    current_page = tasks_page.number
+    total_pages = paginator.num_pages
+    
+    page_range = []
+    if total_pages <= 7:
+        page_range = list(range(1, total_pages + 1))
+    else:
+        if current_page <= 3:
+            page_range = list(range(1, 6)) + ['...', total_pages]
+        elif current_page >= total_pages - 2:
+            page_range = [1, '...'] + list(range(total_pages - 4, total_pages + 1))
+        else:
+            page_range = [1, '...'] + list(range(current_page - 1, current_page + 2)) + ['...', total_pages]
+    
+    # 상태별 개수 집계
+    total_count = DataFetchRequest.objects.count()
+    pending_count = DataFetchRequest.objects.filter(status='PENDING').count()
+    processing_count = DataFetchRequest.objects.filter(status='PROCESSING').count()
+    completed_count = DataFetchRequest.objects.filter(status='COMPLETED').count()
+    failed_count = DataFetchRequest.objects.filter(status='FAILED').count()
+    
+    context = {
+        'tasks': tasks_page,
+        'page_range': page_range,
+        'current_status': status_filter,
+        'current_symbol': symbol_filter,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'processing_count': processing_count,
+        'completed_count': completed_count,
+        'failed_count': failed_count,
+    }
+    
+    return render(request, 'hts/task_queue_list.html', context)

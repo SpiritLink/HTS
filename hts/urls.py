@@ -14,4 +14,6 @@ urlpatterns = [
     path('info/list/', controllers.stock_list_view, name='stock_list'),
     path('info/search/', controllers.stock_search_page_view, name='stock_search_page'),
     path('guide/', controllers.dev_guide_view, name='dev_guide'),
+    path('tasks/', controllers.task_lookup_view, name='task_lookup'),
+    path('tasks/queue/', controllers.task_queue_list_view, name='task_queue_list'),
 ]
