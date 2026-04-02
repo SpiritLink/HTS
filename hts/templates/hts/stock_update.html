@@ -202,24 +202,28 @@
         <div class="info-panel">
             <h3>ℹ️ 안내사항</h3>
             <ul>
-                <li>Nasdaq에서 제공하는 공식 데이터를 활용하여 종목 정보를 갱신합니다.</li>
+                <li>FinanceDataReader 및 Nasdaq API를 활용하여 종목 정보를 갱신합니다.</li>
+                <li>한국 시장(KOSPI, KOSDAQ)과 미국 시장(NASDAQ, NYSE, AMEX)을 지원합니다.</li>
                 <li>신규 상장 종목은 자동으로 추가되며, 기존 종목 정보는 업데이트됩니다.</li>
                 <li>데이터 다운로드 및 처리에는 약 10~30초 정도 소요될 수 있습니다.</li>
-                <li>현재 미국 시장(NASDAQ, NYSE, AMEX) 종목만 지원됩니다.</li>
             </ul>
         </div>
 
         <!-- 업데이트 패널 -->
         <div class="update-panel">
             <h2>📊 종목 정보 가져오기</h2>
-            <p>갱신할 시장을 선택하고 버튼을 클릭하세요. 선택한 시장의 종목 정보를 Nasdaq에서 가져와 DB를 갱신합니다.</p>
+            <p>갱신할 시장을 선택하고 버튼을 클릭하세요. 선택한 시장의 종목 정보를 가져와 DB를 갱신합니다.</p>
             
             <div class="market-selector" style="background: rgba(255,255,255,0.1); border: none;">
                 <label style="color: white; font-weight: 600;">시장 선택:</label>
                 <div class="market-options" style="margin-top: 10px;">
-                    <div class="market-option selected" onclick="selectMarket('ALL')" style="background: rgba(255,255,255,0.9);">
-                        <input type="radio" name="market" value="ALL" id="market-all" checked>
-                        <label for="market-all">전체 시장</label>
+                    <div class="market-option selected" onclick="selectMarket('KOSPI')" style="background: rgba(255,255,255,0.9);">
+                        <input type="radio" name="market" value="KOSPI" id="market-kospi" checked>
+                        <label for="market-kospi">KOSPI (코스피)</label>
+                    </div>
+                    <div class="market-option" onclick="selectMarket('KOSDAQ')" style="background: rgba(255,255,255,0.9);">
+                        <input type="radio" name="market" value="KOSDAQ" id="market-kosdaq">
+                        <label for="market-kosdaq">KOSDAQ (코스닥)</label>
                     </div>
                     <div class="market-option" onclick="selectMarket('NASDAQ')" style="background: rgba(255,255,255,0.9);">
                         <input type="radio" name="market" value="NASDAQ" id="market-nasdaq">

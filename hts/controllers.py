@@ -516,102 +516,164 @@ def stock_update_view(request):
 @require_POST
 def update_stocks_from_nasdaq(request):
     """
-    Nasdaq API에서 종목 정보를 가져와 DB를 갱신하는 API
+    FinanceDataReader(KOSPI/KOSDAQ) 및 Nasdaq API에서 종목 정보를 가져와 DB를 갱신하는 API
     """
     import requests
     from datetime import datetime
     
     try:
         data = json.loads(request.body)
-        market_type = data.get('market', 'ALL')  # NASDAQ, NYSE, AMEX, ALL
-        
-        # Nasdaq API 설정
-        exchanges = []
-        if market_type == 'ALL' or market_type == 'NASDAQ':
-            exchanges.append('NASDAQ')
-        if market_type == 'ALL' or market_type == 'NYSE':
-            exchanges.append('NYSE')
-        if market_type == 'ALL' or market_type == 'AMEX':
-            exchanges.append('AMEX')
+        market_type = data.get('market', 'KOSPI')  # KOSPI, KOSDAQ, NASDAQ, NYSE, AMEX
         
         updated_count = 0
         created_count = 0
         skipped_count = 0
         errors = []
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Origin': 'https://www.nasdaq.com',
-            'Referer': 'https://www.nasdaq.com/',
-        }
-        
-        for exchange in exchanges:
+        # 한국 시장 (FinanceDataReader 사용)
+        if market_type in ['KOSPI', 'KOSDAQ']:
             try:
-                # Nasdaq API v2 - JSON 형식
-                url = f'https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&offset=0&exchange={exchange}'
+                import FinanceDataReader as fdr
+                import traceback
+                import ssl
                 
-                response = requests.get(url, headers=headers, timeout=60)
-                response.raise_for_status()
+        # SSL 인증서 검증 우회 (개발 환경용)
+                ssl._create_default_https_context = ssl._create_unverified_context
                 
-                data_json = response.json()
+                # FinanceDataReader로 종목 리스트 가져오기
+                df = fdr.StockListing(market_type)
                 
-                # 응답 구조 확인
-                if not data_json.get('data') or not data_json['data'].get('table') or not data_json['data']['table'].get('rows'):
-                    errors.append(f'{exchange}: 데이터가 비어있습니다.')
-                    continue
-                
-                rows = data_json['data']['table']['rows']
-                
-                for row in rows:
-                    try:
-                        symbol = row.get('symbol', '').strip()
-                        name = row.get('name', '').strip()[:200]  # 200자로 제한
-                        
-                        if not symbol or not name:
-                            continue
-                        
-                        # 티커 심볼 정제 (예: ^IXIC 제외)
-                        if '^' in symbol or '/' in symbol:
-                            continue
-                            
-                        # 시장 타입 설정
-                        market = exchange
-                        
-                        # 기존 종목 확인
+                if df is None or df.empty:
+                    errors.append(f'{market_type}: 데이터를 가져올 수 없습니다.')
+                else:
+                    for _, row in df.iterrows():
                         try:
-                            stock = Stock.objects.get(symbol=symbol)
-                            # 정보가 완전히 일치하는지 확인
-                            if stock.name == name and stock.market == market:
-                                skipped_count += 1  # 변경 없음 - 건���뛰기
-                            else:
-                                # 정보 업데이트
-                                stock.name = name
-                                stock.market = market
-                                stock.save()
-                                updated_count += 1
-                        except Stock.DoesNotExist:
-                            # 신규 생성
-                            Stock.objects.create(
-                                symbol=symbol,
-                                name=name,
-                                market=market
-                            )
-                            created_count += 1
+                            symbol = str(row.get('Code', '')).strip()
+                            name = str(row.get('Name', '')).strip()[:200]  # 200자로 제한
                             
-                    except Exception as e:
-                        errors.append(f'{symbol}: {str(e)}')
-                        continue
+                            if not symbol or not name:
+                                continue
+                            
+                            # 시장 타입 설정
+                            market = market_type
+                            
+                            # 기존 종목 확인
+                            try:
+                                stock = Stock.objects.get(symbol=symbol)
+                                # 정보가 완전히 일치하는지 확인
+                                if stock.name == name and stock.market == market:
+                                    skipped_count += 1  # 변경 없음 - 스킵
+                                else:
+                                    # 정보 업데이트
+                                    stock.name = name
+                                    stock.market = market
+                                    stock.save()
+                                    updated_count += 1
+                            except Stock.DoesNotExist:
+                                # 신규 생성
+                                Stock.objects.create(
+                                    symbol=symbol,
+                                    name=name,
+                                    market=market
+                                )
+                                created_count += 1
+                                
+                        except Exception as e:
+                            errors.append(f'{symbol}: {str(e)}')
+                            continue
                         
+            except ImportError as e:
+                errors.append(f'FinanceDataReader 라이브러리 오류: {str(e)}')
             except Exception as e:
-                errors.append(f'{exchange} 처리 중 오류: {str(e)}')
-                continue
+                import traceback
+                error_detail = traceback.format_exc()
+                errors.append(f'{market_type} 처리 중 오류: {str(e)}')
+                # 로그에 상세 오류 기록
+                print(f"[ERROR] FinanceDataReader {market_type}: {error_detail}")
+        
+        # 미국 시장 (Nasdaq API 사용)
+        else:
+            exchanges = []
+            if market_type == 'NASDAQ':
+                exchanges.append('NASDAQ')
+            elif market_type == 'NYSE':
+                exchanges.append('NYSE')
+            elif market_type == 'AMEX':
+                exchanges.append('AMEX')
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Origin': 'https://www.nasdaq.com',
+                'Referer': 'https://www.nasdaq.com/',
+            }
+            
+            for exchange in exchanges:
+                try:
+                    # Nasdaq API v2 - JSON 형식
+                    url = f'https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&offset=0&exchange={exchange}'
+                    
+                    response = requests.get(url, headers=headers, timeout=60)
+                    response.raise_for_status()
+                    
+                    data_json = response.json()
+                    
+                    # 응답 구조 확인
+                    if not data_json.get('data') or not data_json['data'].get('table') or not data_json['data']['table'].get('rows'):
+                        errors.append(f'{exchange}: 데이터가 비어있습니다.')
+                        continue
+                    
+                    rows = data_json['data']['table']['rows']
+                    
+                    for row in rows:
+                        try:
+                            symbol = row.get('symbol', '').strip()
+                            name = row.get('name', '').strip()[:200]  # 200자로 제한
+                            
+                            if not symbol or not name:
+                                continue
+                            
+                            # 티커 심볼 정제 (예: ^IXIC 제외)
+                            if '^' in symbol or '/' in symbol:
+                                continue
+                                
+                            # 시장 타입 설정
+                            market = exchange
+                            
+                            # 기존 종목 확인
+                            try:
+                                stock = Stock.objects.get(symbol=symbol)
+                                # 정보가 완전히 일치하는지 확인
+                                if stock.name == name and stock.market == market:
+                                    skipped_count += 1  # 변경 없음 - 스킵
+                                else:
+                                    # 정보 업데이트
+                                    stock.name = name
+                                    stock.market = market
+                                    stock.save()
+                                    updated_count += 1
+                            except Stock.DoesNotExist:
+                                # 신규 생성
+                                Stock.objects.create(
+                                    symbol=symbol,
+                                    name=name,
+                                    market=market
+                                )
+                                created_count += 1
+                                
+                        except Exception as e:
+                            errors.append(f'{symbol}: {str(e)}')
+                            continue
+                            
+                except Exception as e:
+                    errors.append(f'{exchange} 처리 중 오류: {str(e)}')
+                    continue
         
         total_processed = created_count + updated_count + skipped_count
         return JsonResponse({
             'success': True,
-            'message': f'종목 정보 갱신 완료 (신규: {created_count}개, 갱신: {updated_count}개, 건���뛰기: {skipped_count}개)',
+            'message': f'종목 정보 갱신 완료 (신규: {created_count}개, 갱신: {updated_count}개, 스킵: {skipped_count}개)',
             'created_count': created_count,
             'updated_count': updated_count,
             'skipped_count': skipped_count,
