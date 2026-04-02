@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 import pandas as pd
+import pytz
 import yfinance as yf
 from celery import shared_task
 from django.db import transaction
@@ -174,11 +175,23 @@ def fetch_stock_data(self, request_id):
             if not hist.empty:
                 price_objects = []
                 
+                # KST 시간대 설정
+                kst_tz = pytz.timezone('Asia/Seoul')
+                
                 for index, row in hist.iterrows():
+                    # Yahoo Finance 데이터의 timestamp 처리
                     if hasattr(index, 'to_pydatetime'):
-                        timestamp = timezone.make_aware(index.to_pydatetime()) if not index.tzinfo else index.to_pydatetime()
+                        dt = index.to_pydatetime()
                     else:
-                        timestamp = timezone.make_aware(datetime.combine(index, datetime.min.time()))
+                        dt = datetime.combine(index, datetime.min.time())
+                    
+                    # 시간대 정보가 있으면 UTC -> KST 변환, 없으면 KST로 설정
+                    if dt.tzinfo:
+                        # UTC -> KST 변환
+                        timestamp = dt.astimezone(kst_tz)
+                    else:
+                        # naive datetime -> KST aware
+                        timestamp = kst_tz.localize(dt)
                     
                     price_date = timestamp.date()
                     trading_days_in_data.add(price_date)

@@ -518,7 +518,8 @@
             const volumeCanvas = document.getElementById('volumeChart');
 
             // 기간 계산
-            const endDate = new Date();
+            const today = new Date();
+            const endDate = new Date(today);
             endDate.setDate(endDate.getDate() - 1); // 어제
             const startDate = new Date(endDate);
             startDate.setDate(startDate.getDate() - currentPeriodDays + 1);
@@ -633,34 +634,69 @@
         });
 
         // 네이버 금융 스타일 캔들스틱 차트 렌더링
+        // DB에 KST로 저장되어 있으므로 별도 변환 불필요
         function renderCandlestickChart(priceData, interval = '1d') {
             const ctx = document.getElementById('priceChart').getContext('2d');
             const dataCount = priceData.length;
             
-            // X축 라벨 포맷
+            // 시작일과 종료일
+            const firstDate = new Date(priceData[0].timestamp);
+            const lastDate = new Date(priceData[priceData.length - 1].timestamp);
+            
+            // X축 라벨 포맷 (DB는 KST로 저장됨)
             function formatLabel(timestamp) {
                 const date = new Date(timestamp);
                 const month = date.getMonth() + 1;
                 const day = date.getDate();
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
                 if (interval === '1d') {
                     return `${month}/${day}`;
                 } else {
-                    return `${month}/${day} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                    return `${month}/${day} ${hours}:${minutes}`;
                 }
             }
             
-            const labels = priceData.map(item => formatLabel(item.timestamp));
+            // 데이터가 많은 경우 압축 (시각적 표시용)
+            let displayData = priceData;
+            let dataIndices = priceData.map((_, i) => i);
             
-            // 캔들스틱 데이터 준비
-            const candleData = priceData.map(item => ({
-                x: item.timestamp,
-                o: item.open_price,
-                h: item.high_price,
-                l: item.low_price,
-                c: item.close_price
-            }));
+            if (dataCount > 150) {
+                // 150개로 압축
+                const step = Math.ceil(dataCount / 150);
+                displayData = [];
+                dataIndices = [];
+                
+                for (let i = 0; i < priceData.length; i += step) {
+                    // 구간 내 OHLC 집계
+                    const chunk = priceData.slice(i, Math.min(i + step, priceData.length));
+                    const aggregated = {
+                        timestamp: chunk[0].timestamp,
+                        open_price: chunk[0].open_price,
+                        high_price: Math.max(...chunk.map(d => d.high_price)),
+                        low_price: Math.min(...chunk.map(d => d.low_price)),
+                        close_price: chunk[chunk.length - 1].close_price
+                    };
+                    displayData.push(aggregated);
+                    dataIndices.push(i);
+                }
+                
+                // 마지막 데이터 정확히 반영
+                if (displayData[displayData.length - 1].timestamp !== priceData[priceData.length - 1].timestamp) {
+                    displayData[displayData.length - 1] = {
+                        timestamp: priceData[priceData.length - 1].timestamp,
+                        open_price: priceData[priceData.length - 1].open_price,
+                        high_price: priceData[priceData.length - 1].high_price,
+                        low_price: priceData[priceData.length - 1].low_price,
+                        close_price: priceData[priceData.length - 1].close_price
+                    };
+                }
+            }
+            
+            const labels = displayData.map(item => formatLabel(item.timestamp));
+            const displayCount = displayData.length;
 
-            // 상승/하띡 색상 (네이버 금융 스타일: 빨간색=상승, 파란색=하띡)
+            // 상승/하띡 색상
             const upColor = '#e31b23';
             const downColor = '#2179f5';
             
@@ -671,11 +707,10 @@
                     const ctx = chart.ctx;
                     const xAxis = chart.scales.x;
                     const yAxis = chart.scales.y;
-                    const meta = chart.getDatasetMeta(0);
                     
                     ctx.save();
                     
-                    priceData.forEach((item, index) => {
+                    displayData.forEach((item, index) => {
                         const x = xAxis.getPixelForValue(index);
                         const open = yAxis.getPixelForValue(item.open_price);
                         const close = yAxis.getPixelForValue(item.close_price);
@@ -690,7 +725,7 @@
                         // 캔들 몸통
                         const bodyHeight = Math.abs(close - open);
                         const bodyTop = Math.min(open, close);
-                        const candleWidth = Math.max(xAxis.width / priceData.length * 0.6, 4);
+                        const candleWidth = Math.max(xAxis.width / displayCount * 0.7, 3);
                         
                         ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight || 1);
                         
@@ -713,7 +748,7 @@
                     labels: labels,
                     datasets: [{
                         label: '종가',
-                        data: priceData.map(item => item.close_price),
+                        data: displayData.map(item => item.close_price),
                         borderColor: 'transparent',
                         pointRadius: 0,
                         fill: false
@@ -735,12 +770,12 @@
                             padding: 10,
                             callbacks: {
                                 title: function(context) {
-                                    const item = priceData[context[0].dataIndex];
+                                    const item = displayData[context[0].dataIndex];
                                     const date = new Date(item.timestamp);
                                     return date.toLocaleString('ko-KR');
                                 },
                                 label: function(context) {
-                                    const item = priceData[context.dataIndex];
+                                    const item = displayData[context.dataIndex];
                                     const change = item.close_price - item.open_price;
                                     const changeRate = item.open_price !== 0 ? (change / item.open_price * 100).toFixed(2) : 0;
                                     return [
@@ -781,18 +816,48 @@
         }
 
         // 거래량 차트 렌더링
+        // DB에 KST로 저장되어 있으므로 별도 변환 불필요
         function renderVolumeChart(priceData, interval = '1d') {
             const ctx = document.getElementById('volumeChart').getContext('2d');
+            const dataCount = priceData.length;
             
-            const labels = priceData.map(item => {
+            // 메인 차트와 동일한 압축 로직 적용
+            let displayData = priceData;
+            if (dataCount > 150) {
+                const step = Math.ceil(dataCount / 150);
+                displayData = [];
+                
+                for (let i = 0; i < priceData.length; i += step) {
+                    const chunk = priceData.slice(i, Math.min(i + step, priceData.length));
+                    const aggregated = {
+                        timestamp: chunk[0].timestamp,
+                        open_price: chunk[0].open_price,
+                        close_price: chunk[chunk.length - 1].close_price,
+                        volume: chunk.reduce((sum, d) => sum + (d.volume || 0), 0) // 거래량은 합산
+                    };
+                    displayData.push(aggregated);
+                }
+                
+                // 마지막 데이터
+                if (displayData[displayData.length - 1].timestamp !== priceData[priceData.length - 1].timestamp) {
+                    displayData[displayData.length - 1] = {
+                        timestamp: priceData[priceData.length - 1].timestamp,
+                        open_price: priceData[priceData.length - 1].open_price,
+                        close_price: priceData[priceData.length - 1].close_price,
+                        volume: priceData[priceData.length - 1].volume || 0
+                    };
+                }
+            }
+            
+            const labels = displayData.map(item => {
                 const date = new Date(item.timestamp);
                 return `${date.getMonth() + 1}/${date.getDate()}`;
             });
             
-            const volumes = priceData.map(item => item.volume || 0);
+            const volumes = displayData.map(item => item.volume || 0);
             
             // 상승/하띡 색상
-            const barColors = priceData.map(item => {
+            const barColors = displayData.map(item => {
                 if (item.close_price > item.open_price) return '#e31b23';
                 if (item.close_price < item.open_price) return '#2179f5';
                 return '#999';

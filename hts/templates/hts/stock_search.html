@@ -559,15 +559,49 @@
         }
 
         // Chart.js 렌더링 함수 (개선된 버전)
+        // DB에 KST로 저장되어 있으므로 별도 변환 불필요
         function renderChart(priceData, stockName, interval = '1d') {
             const ctx = document.getElementById('priceChart').getContext('2d');
             const dataCount = priceData.length;
             
-            // 데이터 양에 따른 포인트 크기 조정
-            const pointRadius = dataCount > 100 ? 0 : (dataCount > 50 ? 1 : 2);
-            const pointHoverRadius = dataCount > 100 ? 3 : 4;
+            // 데이터가 많은 경우 압축 (시각적 표시용, 최대 150개)
+            let displayData = priceData;
+            if (dataCount > 150) {
+                const step = Math.ceil(dataCount / 150);
+                displayData = [];
+                
+                for (let i = 0; i < priceData.length; i += step) {
+                    // 구간 내 OHLC 집계
+                    const chunk = priceData.slice(i, Math.min(i + step, priceData.length));
+                    const aggregated = {
+                        timestamp: chunk[0].timestamp,
+                        open_price: chunk[0].open_price,
+                        high_price: Math.max(...chunk.map(d => d.high_price)),
+                        low_price: Math.min(...chunk.map(d => d.low_price)),
+                        close_price: chunk[chunk.length - 1].close_price
+                    };
+                    displayData.push(aggregated);
+                }
+                
+                // 마지막 데이터 정확히 반영
+                if (displayData[displayData.length - 1].timestamp !== priceData[priceData.length - 1].timestamp) {
+                    displayData[displayData.length - 1] = {
+                        timestamp: priceData[priceData.length - 1].timestamp,
+                        open_price: priceData[priceData.length - 1].open_price,
+                        high_price: priceData[priceData.length - 1].high_price,
+                        low_price: priceData[priceData.length - 1].low_price,
+                        close_price: priceData[priceData.length - 1].close_price
+                    };
+                }
+            }
             
-            // X축 라벨 포맷 설정 (interval에 따라)
+            const displayCount = displayData.length;
+            
+            // 데이터 양에 따른 포인트 크기 조정
+            const pointRadius = displayCount > 100 ? 0 : (displayCount > 50 ? 1 : 2);
+            const pointHoverRadius = displayCount > 100 ? 3 : 4;
+            
+            // X축 라벨 포맷 설정 (interval에 따라, DB는 KST)
             function formatLabel(timestamp, interval) {
                 const date = new Date(timestamp);
                 const month = date.getMonth() + 1;
@@ -598,11 +632,11 @@
                 }
             }
 
-            const labels = priceData.map(item => formatLabel(item.timestamp, interval));
-            const maxTicksLimit = getMaxTicksLimit(interval, dataCount);
+            const labels = displayData.map(item => formatLabel(item.timestamp, interval));
+            const maxTicksLimit = getMaxTicksLimit(interval, displayCount);
 
             // 색상: 상승 빨간색, 하띡 파란색 (더 선명하게)
-            const colors = priceData.map(item => {
+            const colors = displayData.map(item => {
                 if (item.close_price > item.open_price) {
                     return '#ef4444'; // 빨간색 (상승)
                 } else if (item.close_price < item.open_price) {
@@ -613,7 +647,7 @@
             });
             
             // 배경색 (투명도 적용)
-            const bgColors = priceData.map(item => {
+            const bgColors = displayData.map(item => {
                 if (item.close_price > item.open_price) {
                     return 'rgba(239, 68, 68, 0.3)';
                 } else if (item.close_price < item.open_price) {
@@ -623,13 +657,13 @@
                 }
             });
 
-            const barData = priceData.map(item => {
+            const barData = displayData.map(item => {
                 const low = item.low_price !== null ? item.low_price : item.close_price;
                 const high = item.high_price !== null ? item.high_price : item.close_price;
                 return [low, high];
             });
 
-            const closePrices = priceData.map(item => item.close_price);
+            const closePrices = displayData.map(item => item.close_price);
 
             priceChartInstance = new Chart(ctx, {
                 data: {
@@ -680,7 +714,7 @@
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    const item = priceData[context[0].dataIndex];
+                                    const item = displayData[context[0].dataIndex];
                                     const date = new Date(item.timestamp);
                                     if (interval === '1d') {
                                         return date.toLocaleDateString('ko-KR');
