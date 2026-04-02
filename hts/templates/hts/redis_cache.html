@@ -1,37 +1,10 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redis 캐시 조회 - HTS</title>
-    {% csrf_token %}
-    <style>
-        body { 
-            font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
-            background-color: #f4f6f9; 
-            color: #333; 
-            margin: 0; 
-            padding: 40px 20px; 
-        }
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: #fff; 
-            padding: 40px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-            box-sizing: border-box; 
-        }
-        h1 { 
-            margin-top: 0; 
-            font-size: 26px; 
-            color: #111; 
-            letter-spacing: -0.5px; 
-            border-bottom: 2px solid #111; 
-            padding-bottom: 20px; 
-            margin-bottom: 30px; 
-        }
+{% extends 'hts/base.html' %}
 
+{% block title %}Redis 캐시 조회 - HTS{% endblock %}
+
+{% block head_extra %}{% csrf_token %}{% endblock %}
+
+{% block extra_css %}
         /* 헤더 영역 */
         .header-actions {
             display: flex;
@@ -297,9 +270,52 @@
             background: #f8d7da;
             color: #721c24;
         }
-    </style>
-</head>
-<body>
+
+        /* 모바일 대응 */
+        @media (max-width: 768px) {
+            .header-actions {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .stats {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .action-bar {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 13px;
+            }
+            
+            .checkbox-wrapper {
+                padding: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .table-container {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 8px 6px;
+            }
+        }
+{% endblock %}
+
+{% block content %}
     <div class="container">
         <a href="{% url 'hts:task_lookup' %}" class="back-link">← 작업 조회 메뉴로 돌아가기</a>
         
@@ -379,7 +395,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
+{% block scripts %}
     <script>
         const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
         let cacheItems = [];
@@ -488,11 +506,9 @@
             const checkbox = document.getElementById('select-all-checkbox');
             
             if (selectedKeys.size === cacheItems.length && cacheItems.length > 0) {
-                // 전체 해제
                 selectedKeys.clear();
                 checkbox.checked = false;
             } else {
-                // 전체 선택
                 selectedKeys = new Set(cacheItems.map(item => item.key));
                 checkbox.checked = true;
             }
@@ -636,5 +652,4 @@
             }
         });
     </script>
-</body>
-</html>
+{% endblock %}

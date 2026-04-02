@@ -67,6 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'hts.context_processors.mobile_scale_settings',  # 모바일 화면 축소 설정
             ],
         },
     },

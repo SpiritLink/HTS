@@ -1,36 +1,62 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>정보 조회 - HTS</title>
-    <style>
-        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; text-align: center; }
-        h1 { margin-top: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
+{% extends 'hts/base.html' %}
 
-        .btn-group { display: flex; flex-direction: column; gap: 16px; max-width: 300px; margin: 0 auto; }
-        .btn { padding: 16px 24px; border-radius: 6px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; transition: all 0.2s; cursor: pointer; text-align: center; display: block; }
-        .btn-primary { background-color: #004ea2; color: #fff; border: 1px solid #004ea2; }
-        .btn-primary:hover { background-color: #003a79; border-color: #003a79; }
+{% block title %}정보 조회 - HTS{% endblock %}
 
-        .btn-info { background-color: #28a745; color: #fff; border: 1px solid #28a745; }
-        .btn-info:hover { background-color: #218838; border-color: #1e7e34; }
+{% block extra_css %}
+        /* 종목 전체 목록 패널 (파란색 계열) */
+        .list-panel {
+            background: linear-gradient(135deg, #004ea2 0%, #0066cc 100%);
+            color: white;
+        }
+        .btn-list {
+            background: rgba(255,255,255,0.95);
+            color: #004ea2;
+        }
+        .btn-list:hover {
+            background: white;
+        }
 
-        .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; margin-top: 20px;}
-        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+        /* 주식 검색 패널 (초록색 계열) */
+        .search-panel {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        .btn-search {
+            background: rgba(255,255,255,0.95);
+            color: #11998e;
+        }
+        .btn-search:hover {
+            background: white;
+        }
+{% endblock %}
 
-    </style>
-</head>
-<body>
+{% block content %}
     <div class="container">
         <h1>정보 조회 메뉴</h1>
 
-        <div class="btn-group">
-            <a href="{% url 'hts:stock_list' %}" class="btn btn-primary">종목 전체 목록 조회</a>
-            <a href="{% url 'hts:stock_search_page' %}" class="btn btn-info">주식 이름으로 검색</a>
-            <a href="{% url 'hts:index' %}" class="btn btn-secondary">메인으로 돌아가기</a>
+        <!-- 1. 종목 전체 목록 조회 -->
+        <div class="menu-panel list-panel">
+            <h2>📋 종목 전체 목록 조회</h2>
+            <p>등록된 모든 주식 종목의 목록을 확인할 수 있습니다. 종목 코드, 종목명, 시장 정보를 조회하고 차트를 통해 가격 추이를 분석할 수 있습니다.</p>
+            <a href="{% url 'hts:stock_list' %}" class="btn-menu btn-list">
+                🔍 종목 전체 목록 보기
+            </a>
+        </div>
+
+        <!-- 2. 주식 이름으로 검색 -->
+        <div class="menu-panel search-panel">
+            <h2>🔎 주식 검색</h2>
+            <p>종목명 또는 종목 코드로 원하는 주식을 빠르게 검색할 수 있습니다. 검색 결과에서 바로 차트를 확인하고 상세 정보를 조회할 수 있습니다.</p>
+            <a href="{% url 'hts:stock_search_page' %}" class="btn-menu btn-search">
+                🔎 주식 검색하기
+            </a>
+        </div>
+
+        <!-- 3. 메인으로 돌아가기 -->
+        <div class="menu-panel back-panel">
+            <a href="{% url 'hts:index' %}" class="btn-menu btn-back">
+                ← 메인으로 돌아가기
+            </a>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}
