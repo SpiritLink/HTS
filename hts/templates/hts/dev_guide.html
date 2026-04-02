@@ -43,7 +43,7 @@
             <strong>공통 응답 포맷:</strong> 모든 API는 일관된 JSON 구조(<code>status</code>, <code>message</code>, <code>data</code>/<code>errors</code>)를 반환합니다.
         </div>
 
-        <!-- 1. 주식 종목 조회 -->
+        <!-- 1. 주식 종목 전체 조회 -->
         <h2>1. 주식 종목 전체 조회</h2>
         <div class="endpoint"><span class="method get">GET</span> /api/stocks/</div>
         <p>시스템에 등록된 모든 주식 종목의 정보를 조회합니다.</p>
@@ -62,27 +62,8 @@
     ]
 }</code></pre>
 
-        <!-- 2. 주식 종목 추가 -->
-        <h2>2. 주식 종목 추가 (단건/다건)</h2>
-        <div class="endpoint"><span class="method post">POST</span> /api/stocks/</div>
-        <p>새로운 주식 종목을 등록합니다. 배열을 전달하여 한 번에 여러 종목을 등록(Bulk Create)할 수도 있습니다.</p>
-
-        <h3>Postman Request Body (JSON raw)</h3>
-        <pre><code>[
-    {
-        "symbol": "005930",
-        "name": "삼성전자",
-        "market": "KR"
-    },
-    {
-        "symbol": "AAPL",
-        "name": "Apple Inc.",
-        "market": "US"
-    }
-]</code></pre>
-
-        <!-- 3. 단일 종목 특정 기간 가격 조회 -->
-        <h2>3. 특정 종목의 기간별 주가 조회</h2>
+        <!-- 2. 단일 종목 특정 기간 가격 조회 -->
+        <h2>2. 특정 종목의 기간별 주가 조회</h2>
         <div class="endpoint"><span class="method get">GET</span> /api/prices/symbol/range/</div>
         <p>특정 주식(symbol)의 지정된 시간 범위 내 가격 데이터를 조회합니다. (차트 그리기 용도로 주로 사용됨)</p>
 
@@ -107,37 +88,6 @@
 
         <h3>Postman 테스트 (URL 예시)</h3>
         <pre><code>http://spiritlink.uk/api/prices/symbol/range/?symbol=005930&start_time=2024-02-01T00:00:00Z&end_time=2024-03-01T23:59:59Z</code></pre>
-
-        <!-- 4. 여러 주식 가격 정보 일괄 등록 -->
-        <h2>4. 다수 주식 가격 정보 일괄 등록 (Bulk Create)</h2>
-        <div class="endpoint"><span class="method post">POST</span> /api/prices/bulk-create/</div>
-        <p>외부 크롤러/AI Agent가 수집한 방대한 양의 주가 데이터를 한 번의 요청으로 데이터베이스에 저장합니다.</p>
-
-        <h3>Postman Request Body (JSON raw)</h3>
-        <pre><code>[
-    {
-        "symbol": "005930",
-        "market": "KR",
-        "timestamp": "2024-03-01T09:00:00Z",
-        "open_price": 73000,
-        "high_price": 74000,
-        "low_price": 72500,
-        "close_price": 73500,
-        "volume": 15000000,
-        "stock": 1
-    },
-    {
-        "symbol": "AAPL",
-        "market": "US",
-        "timestamp": "2024-03-01T14:30:00Z",
-        "open_price": 170.5,
-        "high_price": 172.0,
-        "low_price": 169.5,
-        "close_price": 171.2,
-        "volume": 50000000,
-        "stock": 2
-    }
-]</code></pre>
 
     </div>
 </body>

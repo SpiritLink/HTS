@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>작업 조회 - HTS</title>
+    {% csrf_token %}
     <style>
         body { 
             font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
@@ -81,25 +82,221 @@
         .status-processing { background-color: #17a2b8; color: #fff; }
         .status-completed { background-color: #28a745; color: #fff; }
         .status-failed { background-color: #dc3545; color: #fff; }
+
+        /* Redis 큐 상태 패널 */
+        .redis-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: left;
+        }
+        .redis-panel h2 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .redis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .redis-stat {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .redis-stat:hover {
+            transform: translateY(-3px);
+            background: rgba(255,255,255,0.25);
+        }
+        .redis-stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .redis-stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .redis-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-refresh {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #764ba2;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-refresh:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+        .btn-refresh:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .last-updated {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+        .connection-error {
+            background: rgba(220, 53, 69, 0.3);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>작업 조회 메뉴</h1>
 
+        <!-- Redis 큐 실시간 상태 -->
+        <div class="redis-panel">
+            <h2>
+                📦 Redis 큐 실시간 상태
+                <span id="connection-status" style="font-size: 12px; margin-left: auto; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px;">연결 확인 중...</span>
+            </h2>
+            <div class="redis-grid">
+                <div class="redis-stat">
+                    <div id="queue-length" class="redis-stat-value">-</div>
+                    <div class="redis-stat-label">큐 대기 작업</div>
+                </div>
+                <div class="redis-stat">
+                    <div id="scheduled-count" class="redis-stat-value">-</div>
+                    <div class="redis-stat-label">스케줄된 작업</div>
+                </div>
+                <div class="redis-stat">
+                    <div id="pending-db" class="redis-stat-value">-</div>
+                    <div class="redis-stat-label">DB PENDING</div>
+                </div>
+                <div class="redis-stat">
+                    <div id="processing-db" class="redis-stat-value">-</div>
+                    <div class="redis-stat-label">DB PROCESSING</div>
+                </div>
+            </div>
+            <div class="redis-actions">
+                <button id="btn-refresh" class="btn-refresh" onclick="refreshRedisStatus()">
+                    🔄 새로고침
+                </button>
+                <button class="btn-refresh" onclick="startAutoRefresh()" id="btn-auto">
+                    ▶️ 자동 새로고침 (5초)
+                </button>
+                <button class="btn-refresh" onclick="stopAutoRefresh()" id="btn-stop" style="display: none; background: #dc3545; color: white;">
+                    ⏸️ 정지
+                </button>
+            </div>
+            <div id="last-updated" class="last-updated"></div>
+            <div id="error-message" class="connection-error" style="display: none;"></div>
+        </div>
+
         <div class="btn-group">
-            <a href="{% url 'hts:task_queue_list' %}" class="btn btn-primary">가격 조회 큐 조회</a>
+            <a href="{% url 'hts:task_queue_list' %}" class="btn btn-primary">가격 조회 큐 상세 조회 페이지 이동</a>
             <a href="{% url 'hts:index' %}" class="btn btn-secondary">메인으로 돌아가기</a>
         </div>
 
         <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; text-align: left;">
             <h3 style="margin-top: 0; color: #495057; font-size: 16px;">탐색 안내</h3>
             <ul style="color: #666; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li><strong>가격 조회 큐 조회</strong>: Yahoo Finance에서 주가 데이터를 가져오기 위한 요청 큐의 상태를 확인할 수 있습니다.</li>
-                <li>요청의 상태는 PENDING(대기중), PROCESSING(처리중), COMPLETED(완룻), FAILED(실패)로 구분됩니다.</li>
-                <li>페이지당 10개의 요청을 보여줌니다.</li>
+                <li><strong>가격 조회 큐 상세 조회</strong>: Yahoo Finance에서 주가 데이터를 가져오기 위한 요청 큐의 상세 내역을 확인하고 관리할 수 있습니다.</li>
+                <li><strong>Redis 큐 실시간 상태</strong>: Celery/Redis 큐의 실시간 상태를 보여줍니다.</li>
+                <li>요청의 상태는 PENDING(대기중), PROCESSING(처리중), COMPLETED(완료), FAILED(실패)로 구분됩니다.</li>
             </ul>
         </div>
     </div>
+
+    <script>
+        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let autoRefreshInterval = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshRedisStatus();
+        });
+
+        async function refreshRedisStatus() {
+            const btn = document.getElementById('btn-refresh');
+            const statusBadge = document.getElementById('connection-status');
+            
+            btn.disabled = true;
+            btn.textContent = '🔄 불러오는 중...';
+
+            try {
+                const response = await fetch('{% url "hts:celery_status" %}', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': CSRF_TOKEN
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('queue-length').textContent = data.queue_length;
+                    document.getElementById('scheduled-count').textContent = data.scheduled_count;
+                    document.getElementById('pending-db').textContent = data.pending_db_count;
+                    document.getElementById('processing-db').textContent = data.processing_db_count;
+                    
+                    statusBadge.textContent = '✅ 연결완료';
+                    statusBadge.style.background = 'rgba(40, 167, 69, 0.5)';
+                    
+                    const now = new Date();
+                    document.getElementById('last-updated').textContent = 
+                        '업데이트: ' + now.toLocaleTimeString();
+                    document.getElementById('error-message').style.display = 'none';
+                } else {
+                    throw new Error(data.error || '알 수 없는 오류');
+                }
+            } catch (error) {
+                statusBadge.textContent = '❌ 연결 실패';
+                statusBadge.style.background = 'rgba(220, 53, 69, 0.5)';
+                
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = '오류: ' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 새로고침';
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) return;
+            
+            document.getElementById('btn-auto').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'inline-block';
+            
+            refreshRedisStatus();
+            autoRefreshInterval = setInterval(refreshRedisStatus, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            
+            document.getElementById('btn-auto').style.display = 'inline-block';
+            document.getElementById('btn-stop').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

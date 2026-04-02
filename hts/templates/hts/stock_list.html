@@ -153,6 +153,20 @@
             <a href="{% url 'hts:info_lookup' %}" class="btn-secondary" style="display: inline-block;">뒤로가기</a>
         </h1>
 
+        <!-- 시장 필터 영역 -->
+        <div class="date-filter-container" style="margin-bottom: 15px;">
+            <span class="date-filter-label">🏷시장 필터</span>
+            <div class="date-inputs">
+                <select id="market-filter" class="date-input" style="flex: 1; min-width: 150px; cursor: pointer;">
+                    <option value="ALL">전체 시장</option>
+                    <option value="KR">한국 (KOSPI)</option>
+                    <option value="KQ">한국 (KOSDAQ)</option>
+                    <option value="US">미국 (다음나스닥/NYSE)</option>
+                </select>
+                <span id="market-filter-info" style="font-size: 13px; color: #6c757d; padding-top: 10px;">총 <strong id="total-count">0</strong>개 종목</span>
+            </div>
+        </div>
+
         <!-- 날짜 선택 영역 -->
         <div class="date-filter-container">
             <span class="date-filter-label">📅 조회 기간 선택</span>
@@ -244,10 +258,38 @@
     <script>
         // 전역 변수
         let allStocks = [];
+        let filteredStocks = [];
         let currentPage = 1;
         const itemsPerPage = 10;
         let priceChartInstance = null;
         let currentStock = null;
+
+        // 시장 필터 변경 이벤트
+        document.getElementById('market-filter').addEventListener('change', function() {
+            filterStocksByMarket(this.value);
+        });
+
+        // 시장별 종목 필터링
+        function filterStocksByMarket(market) {
+            if (market === 'ALL') {
+                filteredStocks = [...allStocks];
+            } else {
+                filteredStocks = allStocks.filter(stock => {
+                    const stockMarket = stock.market.toUpperCase();
+                    if (market === 'KR') {
+                        return stockMarket === 'KR' || stockMarket === 'KOSPI';
+                    } else if (market === 'KQ') {
+                        return stockMarket === 'KQ' || stockMarket === 'KOSDAQ';
+                    } else if (market === 'US') {
+                        return stockMarket === 'US' || stockMarket === 'NASDAQ' || stockMarket === 'NYSE' || stockMarket === 'AMEX';
+                    }
+                    return false;
+                });
+            }
+            currentPage = 1;
+            document.getElementById('total-count').textContent = filteredStocks.length;
+            renderTable();
+        }
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -295,7 +337,9 @@
                     loader.style.display = 'none';
                     if (data.status === 'success' && data.data && data.data.length > 0) {
                         allStocks = data.data;
+                        filteredStocks = [...allStocks];
                         currentPage = 1;
+                        document.getElementById('total-count').textContent = filteredStocks.length;
                         renderTable();
                     } else {
                         emptyMsg.style.display = 'block';
@@ -315,14 +359,14 @@
 
             tbody.innerHTML = '';
 
-            const totalPages = Math.ceil(allStocks.length / itemsPerPage);
+            const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
 
             if (currentPage < 1) currentPage = 1;
             if (currentPage > totalPages) currentPage = totalPages;
 
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
-            const currentData = allStocks.slice(startIndex, endIndex);
+            const currentData = filteredStocks.slice(startIndex, endIndex);
 
             currentData.forEach((stock, index) => {
                 const tr = document.createElement('tr');
@@ -360,7 +404,7 @@
 
             table.classList.add('active');
 
-            if (allStocks.length > itemsPerPage) {
+            if (filteredStocks.length > itemsPerPage) {
                 pagination.classList.add('active');
                 document.getElementById('page-info').innerText = `${currentPage} / ${totalPages}`;
                 document.getElementById('btn-prev').disabled = (currentPage === 1);

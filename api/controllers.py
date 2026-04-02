@@ -225,11 +225,11 @@ def check_and_request_missing_data(symbol, start_date, end_date, existing_prices
     }
 
 
-class StockAPIView(APIView):
+class StockListAPIView(APIView):
+    """
+    주식 종목 전체 조회 API
+    """
     def get(self, request):
-        """
-        1. 주식 정보를 조회할 수 있는 GET API
-        """
         search = request.query_params.get('search')
         
         if search:
@@ -245,43 +245,6 @@ class StockAPIView(APIView):
             "message": "Stock list retrieved successfully",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        """
-        2. 주식 정보를 추가할 수 있는 POST API
-        """
-        is_many = isinstance(request.data, list)
-        serializer = StockSerializer(data=request.data, many=is_many)
-        
-        if serializer.is_valid():
-            if is_many:
-                symbols = [item.get('symbol') for item in serializer.validated_data if item.get('symbol')]
-                existing_stocks = Stock.objects.filter(symbol__in=symbols).values_list('symbol', flat=True)
-                if existing_stocks:
-                    return Response({
-                        "status": "error", 
-                        "message": f"Some stocks already exist: {', '.join(existing_stocks)}"
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                symbol = serializer.validated_data.get('symbol')
-                if Stock.objects.filter(symbol=symbol).exists():
-                    return Response({
-                        "status": "error", 
-                        "message": "Stock already exists"
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-            serializer.save()
-            return Response({
-                "status": "success",
-                "message": "Stocks added successfully" if is_many else "Stock added successfully",
-                "data": serializer.data
-            }, status=status.HTTP_201_CREATED)
-            
-        return Response({
-            "status": "error",
-            "message": "Invalid data",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StockPriceRangeAPIView(APIView):
@@ -558,36 +521,4 @@ class StockSymbolPriceRangeAPIView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class BulkStockPriceCreateAPIView(APIView):
-    def post(self, request):
-        """
-        6. 여러 주식 가격 정보 일괄 등록 API
-        """
-        if not isinstance(request.data, list):
-            return Response({
-                "status": "error",
-                "message": "Expected a list of objects but got a single object or invalid format."
-            }, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = StockPriceSerializer(data=request.data, many=True)
-        
-        if serializer.is_valid():
-            try:
-                serializer.save()
-                return Response({
-                    "status": "success",
-                    "message": f"Successfully created {len(serializer.data)} stock price records.",
-                    "data": serializer.data
-                }, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                 return Response({
-                    "status": "error",
-                    "message": "An error occurred while saving the data.",
-                    "details": str(e)
-                }, status=status.HTTP_400_BAD_REQUEST)
-                 
-        return Response({
-            "status": "error",
-            "message": "Invalid data format or missing required fields.",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)

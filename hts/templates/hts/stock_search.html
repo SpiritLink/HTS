@@ -165,10 +165,26 @@
             <a href="{% url 'hts:info_lookup' %}" class="btn-secondary">뒤로가기</a>
         </h1>
 
+        <!-- 시장 선택 -->
+        <div class="market-select-container" style="margin-bottom: 15px;">
+            <label class="date-filter-label">🏷시장 선택</label>
+            <select id="market-select" class="search-input" style="border-color: #ced4da;">
+                <option value="">시장을 선택하세요</option>
+                <option value="KR">한국 (KOSPI)</option>
+                <option value="KQ">한국 (KOSDAQ)</option>
+                <option value="US">미국 (다음나스닥/NYSE)</option>
+            </select>
+        </div>
+
         <!-- 종목 검색 -->
-        <div class="search-container" id="search-container">
+        <div class="search-container" id="search-container" style="display: none;">
             <input type="text" id="search-input" class="search-input" placeholder="종목명을 입력하세요 (예: 삼성전자)" autocomplete="off">
             <ul id="autocomplete-list" class="autocomplete-list"></ul>
+        </div>
+
+        <!-- 시장 미선택 안내 메시지 -->
+        <div id="market-notice" class="market-notice">
+            <span style="color: #6c757d; font-size: 14px;">↑ 상단에서 시장을 선택하면 검색이 가능합니다.</span>
         </div>
 
         <!-- 선택된 종목 표시 -->
@@ -232,10 +248,36 @@
         const dateFilterContainer = document.getElementById('date-filter-container');
         const selectedStockInfo = document.getElementById('selected-stock-info');
         const searchContainer = document.getElementById('search-container');
+        const marketSelect = document.getElementById('market-select');
+        const marketNotice = document.getElementById('market-notice');
 
         let debounceTimer;
         let priceChartInstance = null;
         let currentStock = null;
+        let selectedMarket = '';
+
+        // 시장 선택 변경 이벤트
+        marketSelect.addEventListener('change', function() {
+            selectedMarket = this.value;
+            if (selectedMarket) {
+                searchContainer.style.display = 'block';
+                marketNotice.style.display = 'none';
+                searchInput.focus();
+                
+                // 시장별 플이스홀더 설정
+                const marketNames = {
+                    'KR': '삼성전자, 현대자동차...',
+                    'KQ': '엔씨소프트, 카카오...',
+                    'US': 'AAPL, TSLA, MSFT...'
+                };
+                searchInput.placeholder = `종목명을 입력하세요 (예: ${marketNames[selectedMarket]})`;
+            } else {
+                searchContainer.style.display = 'none';
+                marketNotice.style.display = 'block';
+                searchInput.value = '';
+                autocompleteList.style.display = 'none';
+            }
+        });
 
         // 페이지 로드 시 기본 날짜 설정 (최근 1달, 어제까지)
         function initDefaultDates() {
@@ -286,7 +328,8 @@
             }
 
             debounceTimer = setTimeout(() => {
-                fetch(`/hts/search_stocks/?q=${encodeURIComponent(query)}`)
+                if (!selectedMarket) return;
+                fetch(`/hts/search_stocks/?q=${encodeURIComponent(query)}&market=${encodeURIComponent(selectedMarket)}`)
                     .then(response => response.json())
                     .then(data => {
                         autocompleteList.innerHTML = '';

@@ -40,26 +40,19 @@ class Command(BaseCommand):
         """S&P 500 종목 가져오기 (Wikipedia CSV)"""
         self.stdout.write('S&P 500 종목 가져오는 중...')
         try:
+            import pandas as pd
+            
             # Wikipedia에서 S&P 500 목록 가져오기
             url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            }
             
-            response = requests.get(url, headers=headers, timeout=30)
-            
-            # HTML에서 테이블 직접 파싱 (정규식 사용)
-            import re
-            html = response.text
-            
-            # 테이블 행 찾기
-            pattern = r'<tr>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>([^<]+)</td>'
-            matches = re.findall(pattern, html)
+            # pandas의 read_html을 사용하여 테이블 추출
+            tables = pd.read_html(url)
+            sp500_df = tables[0]
             
             count = 0
-            for symbol, name in matches[:600]:  # 처음 500개 정도
-                symbol = symbol.strip().replace('.', '-')
-                name = name.strip()
+            for index, row in sp500_df.iterrows():
+                symbol = str(row['Symbol']).strip().replace('.', '-')
+                name = str(row['Security']).strip()
                 
                 if symbol and name and len(symbol) <= 10:
                     Stock.objects.get_or_create(
@@ -79,15 +72,6 @@ class Command(BaseCommand):
         """NASDAQ 종목 가져오기 (NASDAQ 공식 CSV)"""
         self.stdout.write('NASDAQ 종목 가져오는 중...')
         try:
-            # NASDAQ 공식 CSV 파일
-            url = 'ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt'
-            
-            # 대체: 다운로드 페이지에서 가져오기
-            url = 'https://www.nasdaq.com/market-activity/stocks/screener'
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            }
-            
             # 간단한 상위 종목만 가져오기
             nasdaq_top = [
                 ('AAPL', 'Apple Inc.'),

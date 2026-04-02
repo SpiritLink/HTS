@@ -3,8 +3,11 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.views.decorators.http import require_POST
 from .services import get_user_portfolio
 from .models import User, Stock, DataFetchRequest
+from .tasks import fetch_stock_data, process_pending_fetch_requests
+import redis
 
 def index(request):
     return render(request, 'hts/index.html')
@@ -167,3 +170,78 @@ def task_queue_list_view(request):
     }
     
     return render(request, 'hts/task_queue_list.html', context)
+
+
+@require_POST
+def retry_failed_task(request, task_id):
+    """FAILED 상태의 작업을 다시 PENDING으로 변경하고 큐에 넣음"""
+    try:
+        task = DataFetchRequest.objects.get(id=task_id)
+        if task.status == 'FAILED':
+            task.status = 'PENDING'
+            task.save()
+            # Celery 작업 실행
+            fetch_stock_data.delay(task.id)
+            return JsonResponse({'success': True, 'message': f'Task {task_id} 재시작됨'})
+        return JsonResponse({'success': False, 'message': 'FAILED 상태의 작업만 재시작할 수 있습니다.'})
+    except DataFetchRequest.DoesNotExist:
+        return JsonResponse({'success': False, 'message': '작업을 찾을 수 없습니다.'})
+
+
+@require_POST
+def process_all_pending(request):
+    """모든 PENDING 상태 작업을 큐에 넣음"""
+    pending_tasks = DataFetchRequest.objects.filter(status='PENDING')
+    count = 0
+    for task in pending_tasks:
+        fetch_stock_data.delay(task.id)
+        count += 1
+    return JsonResponse({'success': True, 'message': f'{count}개의 작업이 큐에 추가됨'})
+
+
+@require_POST
+def clear_completed_tasks(request):
+    """COMPLETED 상태의 모든 작업 삭제"""
+    deleted_count, _ = DataFetchRequest.objects.filter(status='COMPLETED').delete()
+    return JsonResponse({'success': True, 'message': f'{deleted_count}개의 완료된 작업 삭제됨'})
+
+
+def celery_queue_status(request):
+    """Celery/Redis 큐 상태 확인 API"""
+    if request.method == 'POST' and request.body:
+        # POST with CSRF check for state-changing operations
+        pass
+    
+    try:
+        r = redis.Redis(host='localhost', port=6379, db=0)
+        
+        # 큐 길이 확인
+        queue_len = r.llen('celery')
+        
+        # 스케줄된 작업 확인 (Celery beat)
+        scheduled = r.zrange('celery:schedule', 0, -1, withscores=True)
+        
+        # 큐 내용 샘플 (최대 5개)
+        queue_items = r.lrange('celery', 0, 4)
+        queue_sample = []
+        for item in queue_items:
+            try:
+                import json
+                data = json.loads(item)
+                queue_sample.append({
+                    'task': data.get('headers', {}).get('task', 'unknown'),
+                    'id': data.get('headers', {}).get('id', 'unknown')[:8] + '...'
+                })
+            except:
+                queue_sample.append({'raw': str(item)[:50]})
+        
+        return JsonResponse({
+            'success': True,
+            'queue_length': queue_len,
+            'scheduled_count': len(scheduled),
+            'queue_sample': queue_sample,
+            'pending_db_count': DataFetchRequest.objects.filter(status='PENDING').count(),
+            'processing_db_count': DataFetchRequest.objects.filter(status='PROCESSING').count(),
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

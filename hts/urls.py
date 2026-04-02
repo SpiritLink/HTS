@@ -16,4 +16,8 @@ urlpatterns = [
     path('guide/', controllers.dev_guide_view, name='dev_guide'),
     path('tasks/', controllers.task_lookup_view, name='task_lookup'),
     path('tasks/queue/', controllers.task_queue_list_view, name='task_queue_list'),
+    path('tasks/queue/retry/<int:task_id>/', controllers.retry_failed_task, name='retry_task'),
+    path('tasks/queue/process-pending/', controllers.process_all_pending, name='process_pending'),
+    path('tasks/queue/clear-completed/', controllers.clear_completed_tasks, name='clear_completed'),
+    path('tasks/queue/celery-status/', controllers.celery_queue_status, name='celery_status'),  # GET/POST 모두 허용
 ]
