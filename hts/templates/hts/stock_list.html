@@ -188,6 +188,21 @@
         .market-badge { background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 8px; display: inline-block; vertical-align: middle; }
 
         /* 미디어 쿼리 - 모바일 화면 대응 */
+        @media (max-width: 768px) {
+            .chart-controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            .chart-controls > div {
+                width: 100%;
+            }
+            .interval-selector {
+                display: flex;
+                align-items: center;
+            }
+        }
+        
         @media (max-width: 480px) {
             h1 { font-size: 18px; }
             .btn-secondary { font-size: 12px; padding: 5px 10px; }
@@ -197,6 +212,13 @@
             .date-inputs { flex-direction: column; align-items: stretch; }
             .date-separator { text-align: center; padding: 5px 0; }
             .date-input-wrapper { min-width: auto; }
+            .chart-controls {
+                padding: 10px 15px;
+            }
+            .interval-selector select {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
         }
     </style>
 </head>
@@ -282,9 +304,26 @@
             <!-- 차트 컨트롤 -->
             <div class="chart-controls">
                 <div class="chart-period-info" id="chart-period-info">기간: -</div>
-                <div class="chart-zoom-hint">
-                    <span class="pc">🖱️ 마우스 휠로 확대/축소</span>
-                    <span class="mobile">👆 두 손가락으로 확대/축소</span>
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <!-- 시작일/종료일 선택 -->
+                    <div class="date-range-selector" style="display: flex; align-items: center; gap: 8px;">
+                        <label for="chart-start-date" style="font-size: 12px; color: #666;">시작:</label>
+                        <input type="date" id="chart-start-date" onchange="setCustomDateRange()" style="padding: 5px 8px; font-size: 13px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer;">
+                        <span style="color: #999; font-size: 12px;">~</span>
+                        <label for="chart-end-date" style="font-size: 12px; color: #666;">종료:</label>
+                        <input type="date" id="chart-end-date" onchange="setCustomDateRange()" style="padding: 5px 8px; font-size: 13px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer;">
+                    </div>
+                    <!-- 시간 간격 선택 드롭다운 -->
+                    <div class="interval-selector">
+                        <label for="interval-select" style="font-size: 12px; color: #666; margin-right: 5px;">간격:</label>
+                        <select id="interval-select" onchange="setInterval(this.value)" style="padding: 5px 10px; font-size: 13px; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer;">
+                            <option value="1d">1일</option>
+                            <option value="1h" selected>1시간</option>
+                            <option value="30m">30분</option>
+                            <option value="15m">15분</option>
+                            <option value="5m">5분</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -442,9 +481,117 @@
 
         // 현재 선택된 기간 (일 단위)
         let currentPeriodDays = 30;
+        let currentInterval = '1h'; // 기본값: 1시간
         let volumeChartInstance = null;
         let fullPriceData = []; // 전체 데이터 저장
         let currentZoomLevel = 1; // 줌 레벨 (1 = 기본)
+
+        // 기간에 따른 기본 interval 자동 설정
+        function getDefaultIntervalForPeriod(days) {
+            if (days >= 31) {
+                return '1d';   // 31일 이상: 1일 단위만 가능
+            } else if (days === 1) {
+                return '5m';   // 1일: 5분 단위
+            } else if (days === 2) {
+                return '15m';  // 2일: 15분 단위
+            } else if (days <= 7) {
+                return '1h';   // 1주일 이하: 1시간 단위
+            } else {
+                return '1d';   // 8~30일: 1일 단위
+            }
+        }
+
+        // Google Finance 스타일 라인 차트인지 확인
+        function isLineChartMode() {
+            // 1개월(30일) 초과이거나 interval이 1d이고 기간이 30일 초과인 경우
+            return currentPeriodDays > 30 || (currentInterval === '1d' && currentPeriodDays > 30);
+        }
+
+        // 31일 이상 여부 확인
+        function isLongPeriod() {
+            return currentPeriodDays >= 31;
+        }
+
+        // interval 수동 설정
+        function setInterval(interval) {
+            // 31일 이상이면 1d만 가능
+            if (isLongPeriod() && interval !== '1d') {
+                alert('조회 기간이 31일 이상인 경우 1일 단위만 선택할 수 있습니다.');
+                updateIntervalSelect();
+                return;
+            }
+            currentInterval = interval;
+            loadChartData();
+        }
+
+        // interval 드롭다운 업데이트 및 활성화/비활성화
+        function updateIntervalSelect() {
+            const select = document.getElementById('interval-select');
+            if (select) {
+                select.value = currentInterval;
+                
+                // 31일 이상이면 1d 외에는 비활성화
+                const isLong = isLongPeriod();
+                Array.from(select.options).forEach(option => {
+                    option.disabled = isLong && option.value !== '1d';
+                });
+                
+                // 31일 이상이고 1d가 아니면 1d로 강제 변경
+                if (isLong && currentInterval !== '1d') {
+                    currentInterval = '1d';
+                    select.value = '1d';
+                }
+            }
+        }
+
+        // 커스텀 날짜 범위 설정
+        function setCustomDateRange() {
+            const startInput = document.getElementById('chart-start-date');
+            const endInput = document.getElementById('chart-end-date');
+            
+            if (!startInput || !endInput) return;
+            
+            const startDate = new Date(startInput.value);
+            const endDate = new Date(endInput.value);
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return;
+            
+            // 종료일이 시작일보다 이전이면 조정
+            if (endDate < startDate) {
+                endInput.value = startInput.value;
+                return;
+            }
+            
+            // 기간 계산 (일수)
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            
+            currentPeriodDays = diffDays;
+            
+            // 기간에 따른 interval 자동 설정
+            currentInterval = getDefaultIntervalForPeriod(diffDays);
+            updateIntervalSelect();
+            
+            // 탭 UI 업데이트 (커스텀 선택 상태로)
+            document.querySelectorAll('.period-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            loadChartData();
+        }
+
+        // 날짜 입력 필드 업데이트
+        function updateDateInputs(startDateStr, endDateStr) {
+            const startInput = document.getElementById('chart-start-date');
+            const endInput = document.getElementById('chart-end-date');
+            
+            if (startInput && startDateStr) {
+                startInput.value = startDateStr;
+            }
+            if (endInput && endDateStr) {
+                endInput.value = endDateStr;
+            }
+        }
 
         // 줌 설정값
         const ZOOM_CONFIG = {
@@ -534,6 +681,23 @@
             document.getElementById('modal-change').textContent = '-';
             document.getElementById('modal-change').className = 'price-change';
             document.getElementById('modal-change-rate').textContent = '';
+            
+            // 기본 interval 설정 (1시간)
+            currentInterval = getDefaultIntervalForPeriod(currentPeriodDays);
+            updateIntervalSelect();
+            
+            // 날짜 입력 필드 초기화
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - 1); // 어제
+            const startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - currentPeriodDays + 1);
+            
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+            
+            updateDateInputs(formatDate(startDate), formatDate(endDate));
 
             // 차트 로드
             loadChartData();
@@ -560,6 +724,23 @@
                 }
             });
             
+            // 기간에 따른 interval 자동 설정
+            currentInterval = getDefaultIntervalForPeriod(days);
+            updateIntervalSelect();
+            
+            // 날짜 입력 필드 업데이트
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - 1); // 어제
+            const startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - days + 1);
+            
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+            
+            updateDateInputs(formatDate(startDate), formatDate(endDate));
+            
             loadChartData();
         }
 
@@ -568,16 +749,26 @@
             const chartLoader = document.getElementById('chart-loader');
             const priceCanvas = document.getElementById('priceChart');
             const volumeCanvas = document.getElementById('volumeChart');
+            const startDateInput = document.getElementById('chart-start-date');
+            const endDateInput = document.getElementById('chart-end-date');
 
-            // 기간 계산
-            const today = new Date();
-            const endDate = new Date(today);
-            endDate.setDate(endDate.getDate() - 1); // 어제
-            const startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - currentPeriodDays + 1);
+            let startDateStr, endDateStr;
+            
+            // 커스텀 날짜가 설정되어 있으면 사용, 아니면 기본 기간 계산
+            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+                startDateStr = startDateInput.value;
+                endDateStr = endDateInput.value;
+            } else {
+                // 기간 계산
+                const today = new Date();
+                const endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - 1); // 어제
+                const startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - currentPeriodDays + 1);
 
-            const startDateStr = startDate.toISOString().split('T')[0];
-            const endDateStr = endDate.toISOString().split('T')[0];
+                startDateStr = startDate.toISOString().split('T')[0];
+                endDateStr = endDate.toISOString().split('T')[0];
+            }
             
             // 기간 정보 표시
             updatePeriodInfo(startDateStr, endDateStr);
@@ -598,8 +789,8 @@
             chartLoader.style.display = 'block';
             chartLoader.textContent = "주가 데이터를 불러오는 중입니다...";
 
-            // API 호출
-            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(currentStock.symbol)}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}`)
+            // API 호출 (interval 파라미터 추가)
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(currentStock.symbol)}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&interval=${currentInterval}`)
                 .then(response => response.json())
                 .then(data => {
                     if ((data.status === 'success' || data.status === 'partial') && data.data && data.data.length > 0) {
@@ -608,7 +799,7 @@
                         volumeCanvas.style.display = 'block';
                         
                         const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                        const interval = data.interval || '1d';
+                        const interval = data.interval || currentInterval;
                         
                         // 현재가 정보 업데이트 (마지막 데이터 기준)
                         updatePriceInfo(sortedData[sortedData.length - 1]);
@@ -694,9 +885,8 @@
             const ctx = document.getElementById('priceChart').getContext('2d');
             const dataCount = priceData.length;
             
-            // 시작일과 종료일
-            const firstDate = new Date(priceData[0].timestamp);
-            const lastDate = new Date(priceData[priceData.length - 1].timestamp);
+            // Google Finance 스타일 라인 차트 모드인지 확인
+            const lineChartMode = isLineChartMode();
             
             // X축 라벨 포맷 (DB는 KST로 저장됨)
             function formatLabel(timestamp) {
@@ -751,11 +941,117 @@
             const labels = displayData.map(item => formatLabel(item.timestamp));
             const displayCount = displayData.length;
 
-            // 상승/하띡 색상
+            // Google Finance 스타일 라인 차트
+            if (lineChartMode) {
+                // 시작가와 종가 비교하여 색상 결정 (한국 주식 시장 규칙)
+                // 시작가 < 종가: 상승 (빨강), 시작가 > 종가: 하락 (파랑)
+                const firstPrice = displayData[0].open_price;
+                const lastPrice = displayData[displayData.length - 1].close_price;
+                const isUp = lastPrice >= firstPrice;
+                
+                // 그라데이션 색상 설정
+                const lineColor = isUp ? '#e31b23' : '#2179f5'; // 상승: 빨강, 하락: 파랑
+                const gradientColor = isUp ? 'rgba(227, 27, 35, 0.3)' : 'rgba(33, 121, 245, 0.3)';
+                
+                // 그라데이션 생성
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, gradientColor);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+
+                priceChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '종가',
+                            data: displayData.map(item => item.close_price),
+                            borderColor: lineColor,
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: lineColor,
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2,
+                            fill: true,
+                            tension: 0.4 // 부드러운 곡선
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                titleColor: '#333',
+                                bodyColor: '#333',
+                                borderColor: '#e0e0e0',
+                                borderWidth: 1,
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function(context) {
+                                        const item = displayData[context[0].dataIndex];
+                                        const date = new Date(item.timestamp);
+                                        return date.toLocaleDateString('ko-KR', { 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric',
+                                            weekday: 'short'
+                                        });
+                                    },
+                                    label: function(context) {
+                                        const item = displayData[context.dataIndex];
+                                        const value = item.close_price;
+                                        const prevValue = context.dataIndex > 0 ? displayData[context.dataIndex - 1].close_price : value;
+                                        const change = value - prevValue;
+                                        const changeRate = prevValue !== 0 ? (change / prevValue * 100).toFixed(2) : 0;
+                                        const changeSymbol = change >= 0 ? '▲' : '▼';
+                                        return [
+                                            `종가: ${value.toLocaleString()}원`,
+                                            `변동: ${changeSymbol} ${Math.abs(change).toLocaleString()}원 (${changeRate}%)`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                ticks: { 
+                                    font: { size: 11 }, 
+                                    maxTicksLimit: 6,
+                                    color: '#666'
+                                }
+                            },
+                            y: {
+                                position: 'right',
+                                grid: { color: '#f0f0f0' },
+                                ticks: {
+                                    font: { size: 11 },
+                                    color: '#666',
+                                    callback: function(value) {
+                                        return value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            // 캔들스틱 차트 (기존 로직)
             const upColor = '#e31b23';
             const downColor = '#2179f5';
             
-            // 차트 플러그인: 캔들스틱 그리기
             const candlestickPlugin = {
                 id: 'candlestick',
                 beforeDatasetsDraw: (chart) => {
@@ -777,14 +1073,12 @@
                         ctx.strokeStyle = isUp ? upColor : downColor;
                         ctx.lineWidth = 1;
                         
-                        // 캔들 몸통
                         const bodyHeight = Math.abs(close - open);
                         const bodyTop = Math.min(open, close);
                         const candleWidth = Math.max(xAxis.width / displayCount * 0.7, 3);
                         
                         ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight || 1);
                         
-                        // 위아래 꼬리
                         ctx.beginPath();
                         ctx.moveTo(x, high);
                         ctx.lineTo(x, bodyTop);
@@ -874,6 +1168,31 @@
         // DB에 KST로 저장되어 있으므로 별도 변환 불필요
         function renderVolumeChart(priceData, interval = '1d') {
             const ctx = document.getElementById('volumeChart').getContext('2d');
+            const volumeContainer = document.querySelector('.chart-container.small');
+            const volumeLabel = document.querySelector('.volume-label');
+            
+            // Google Finance 스타일 라인 차트 모드에서는 거래량 숨김
+            if (isLineChartMode()) {
+                if (volumeChartInstance) {
+                    volumeChartInstance.destroy();
+                }
+                if (volumeContainer) {
+                    volumeContainer.style.display = 'none';
+                }
+                if (volumeLabel) {
+                    volumeLabel.style.display = 'none';
+                }
+                return;
+            }
+            
+            // 거래량 영역 다시 표시
+            if (volumeContainer) {
+                volumeContainer.style.display = 'block';
+            }
+            if (volumeLabel) {
+                volumeLabel.style.display = 'block';
+            }
+            
             const dataCount = priceData.length;
             
             // 메인 차트와 동일한 압축 로직 적용
