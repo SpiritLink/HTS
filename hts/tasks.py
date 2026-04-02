@@ -12,6 +12,23 @@ from .models import DataFetchRequest, Stock, StockPrice, StockTradingCalendar
 logger = logging.getLogger(__name__)
 
 
+def get_today():
+    """
+    오늘 날짜를 반환합니다.
+    """
+    from django.utils import timezone
+    return timezone.now().date()
+
+
+def is_valid_date_for_calendar(date):
+    """
+    캘린더에 등록 가능한 날짜인지 확인합니다.
+    오늘과 미래는 등록할 수 없습니다.
+    """
+    today = get_today()
+    return date < today
+
+
 def get_yahoo_ticker_symbol(symbol, market=None):
     """
     DB의 종목 코드를 Yahoo Finance 형식으로 변환합니다.
@@ -107,11 +124,17 @@ def fetch_stock_data(self, request_id):
                 }
             )
             
-            # 요청 기간의 모든 날짜에 대해 캘린더 생성
+            # 요청 기간의 모든 날짜에 대해 캘린더 생성 (오늘과 미래는 제외)
             current_date = start_date
             trading_days_in_data = set()
+            today = get_today()
             
             while current_date <= end_date:
+                # 오늘과 미래는 캘린더에 등록하지 않음
+                if current_date >= today:
+                    current_date += timedelta(days=1)
+                    continue
+                
                 weekday = current_date.weekday()
                 
                 if weekday >= 5:  # 토(5), 일(6)
@@ -166,15 +189,16 @@ def fetch_stock_data(self, request_id):
                     ignore_conflicts=True
                 )
                 
-                # 캘린더 업데이트 - 데이터가 있는 날짜는 TRADING으로 표시
+                # 캘린더 업데이트 - 데이터가 있는 날짜는 TRADING으로 표시 (오늘/미래 제외)
                 for price_date in trading_days_in_data:
-                    StockTradingCalendar.mark_day_type(
-                        symbol=symbol,
-                        market=market_from_yahoo,
-                        date=price_date,
-                        day_type='TRADING',
-                        has_price_data=True
-                    )
+                    if is_valid_date_for_calendar(price_date):
+                        StockTradingCalendar.mark_day_type(
+                            symbol=symbol,
+                            market=market_from_yahoo,
+                            date=price_date,
+                            day_type='TRADING',
+                            has_price_data=True
+                        )
                 
                 logger.info(f"[SUCCESS] {symbol}: Saved {len(price_objects)} records, {len(trading_days_in_data)} trading days")
             else:
@@ -209,6 +233,51 @@ def process_pending_fetch_requests():
     for request in pending_requests:
         fetch_stock_data.delay(request.id)
         logger.info(f"[QUEUE] Task queued: {request.symbol} ({request.start_date} ~ {request.end_date})")
+
+
+@shared_task
+def sync_calendar_with_prices():
+    """
+    StockTradingCalendar와 StockPrice 데이터를 동기화합니다.
+    실제 데이터가 있는데 캘린더에 반영되지 않은 경우를修正합니다.
+    """
+    from django.db.models import Count
+    
+    # 실제 데이터가 있는 날짜들 조회
+    price_dates = StockPrice.objects.values('symbol', 'market').annotate(
+        dates=Count('timestamp__date')
+    ).order_by('symbol')
+    
+    updated_count = 0
+    
+    for entry in price_dates:
+        symbol = entry['symbol']
+        
+        # 해당 종목의 모든 주가 데이터 날짜 조회
+        timestamps = StockPrice.objects.filter(symbol=symbol).values_list('timestamp', flat=True)
+        
+        for ts in timestamps:
+            price_date = ts.date() if hasattr(ts, 'date') else ts
+            
+            # 캘린더 업데이트
+            calendar, created = StockTradingCalendar.objects.get_or_create(
+                symbol=symbol,
+                date=price_date,
+                defaults={
+                    'market': entry['market'],
+                    'day_type': 'TRADING',
+                    'has_price_data': True
+                }
+            )
+            
+            if not created and not calendar.has_price_data:
+                calendar.day_type = 'TRADING'
+                calendar.has_price_data = True
+                calendar.save()
+                updated_count += 1
+    
+    logger.info(f"[SYNC] Updated {updated_count} calendar entries")
+    return updated_count
 
 
 @shared_task

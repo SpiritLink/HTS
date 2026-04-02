@@ -248,10 +248,13 @@
             fetchData();
         });
 
-        // 기본 날짜 설정 (최근 1달)
+        // 기본 날짜 설정 (최근 1달, 어제까지)
         function initDefaultDates() {
-            const endDate = new Date();
-            const startDate = new Date();
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - 1); // 어제
+            
+            const startDate = new Date(endDate);
             startDate.setMonth(startDate.getMonth() - 1);
 
             const endDateStr = endDate.toISOString().split('T')[0];
@@ -261,11 +264,14 @@
             document.getElementById('start-date').value = startDateStr;
         }
 
-        // 프리셋 버튼 클릭 시 날짜 설정
+        // 프리셋 버튼 클릭 시 날짜 설정 (어제까지)
         function setPresetDate(days) {
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - days);
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - 1); // 어제
+            
+            const startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - days + 1);
 
             document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
             document.getElementById('start-date').value = startDate.toISOString().split('T')[0];

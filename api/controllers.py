@@ -3,9 +3,61 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils.dateparse import parse_datetime
 from django.db.models import Q
+from django.utils import timezone
 from hts.models import Stock, StockPrice, DataFetchRequest, StockTradingCalendar
 from .serializers import StockSerializer, StockPriceSerializer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+
+
+def get_today():
+    """
+    오늘 날짜를 반환합니다.
+    """
+    return timezone.now().date()
+
+
+def validate_date_range(start_date, end_date):
+    """
+    조회 기간의 유효성을 검사합니다.
+    
+    Returns:
+        tuple: (is_valid: bool, error_message: str, adjusted_start: date, adjusted_end: date)
+    """
+    today = get_today()
+    
+    # 시작일이 종료일보다 늦은 경우
+    if start_date > end_date:
+        return False, "시작일은 종료일보다 이전이어야 합니다.", None, None
+    
+    # 종료일이 오늘 이후인 경우
+    if end_date >= today:
+        return False, f"조회 기간의 종료일은 어제({today - timedelta(days=1)})까지만 가능합니다. 오늘({today}) 및 미래 데이터는 조회할 수 없습니다.", None, None
+    
+    # 시작일이 오늘 이후인 경우
+    if start_date >= today:
+        return False, f"조회 기간의 시작일은 어제({today - timedelta(days=1)})까지만 가능합니다.", None, None
+    
+    return True, None, start_date, end_date
+
+
+def adjust_to_yesterday(end_date):
+    """
+    종료일이 오늘 이후라면 어제로 조정합니다.
+    """
+    today = get_today()
+    if end_date >= today:
+        return today - timedelta(days=1)
+    return end_date
+
+
+def get_default_date_range(days=30):
+    """
+    기본 조회 기간을 반환합니다 (어제 기준).
+    """
+    today = get_today()
+    end_date = today - timedelta(days=1)  # 어제
+    start_date = end_date - timedelta(days=days-1)  # days일 전
+    return start_date, end_date
 
 
 def get_missing_trading_days(symbol, start_date, end_date):
@@ -50,7 +102,7 @@ def check_and_request_missing_data(symbol, start_date, end_date, existing_prices
     누락된 거래일 데이터가 있는지 확인하고, 필요시 큐에 등록합니다.
     주말/공휴일은 제외하고 실제 거래일만 체크합니다.
     """
-    # DB에 있는 날짜들 추출
+    # DB에 있는 날짜들 추출 (QuerySet을 다시 폄질하지 않고 한 번만 조회)
     existing_dates = set(existing_prices.values_list('timestamp__date', flat=True))
     
     # 캘린더 기준으로 누락된 거래일 계산
@@ -59,8 +111,18 @@ def check_and_request_missing_data(symbol, start_date, end_date, existing_prices
         date__range=(start_date, end_date)
     )
     
+    # 캘린더에서 거래일로 표시된 날짜 종류 (has_price_data=True 기준)
+    trading_days_from_calendar = set(
+        calendar_entries.filter(day_type='TRADING', has_price_data=True).values_list('date', flat=True)
+    )
+    
+    # 캘린더에서 NO_DATA로 표시된 날짜
+    no_data_from_calendar = set(
+        calendar_entries.filter(day_type='NO_DATA').values_list('date', flat=True)
+    )
+    
     missing_trading_days = []
-    no_data_days = []  # NO_DATA로 마킹된 날짜 (Yahoo에 요청할 날짜)
+    no_data_days = []
     
     current = start_date
     while current <= end_date:
@@ -71,22 +133,21 @@ def check_and_request_missing_data(symbol, start_date, end_date, existing_prices
             current += timedelta(days=1)
             continue
         
-        # DB에 데이터가 있는지 확인
-        if current not in existing_dates:
-            try:
-                entry = calendar_entries.get(date=current)
-                if entry.day_type == 'NO_DATA':
-                    # 이미 조회했지만 데이터가 없었던 날
-                    no_data_days.append(current)
-                elif entry.day_type in ['WEEKEND', 'HOLIDAY']:
-                    # 공휴일 - 스킵
-                    pass
-                else:
-                    # 알 수 없는 상태 - 조회 필요
-                    missing_trading_days.append(current)
-            except StockTradingCalendar.DoesNotExist:
-                # 캘린더에 없음 - 처음 조회하는 거래일
+        # 1. 캘린더에서 거래일+데이터있음 표시 + 실제 데이터도 있음 → OK
+        if current in trading_days_from_calendar:
+            if current in existing_dates:
+                # 모두 일치 - 정상
+                pass
+            else:
+                # 캘린더에는 데이터 있음으로 표시되어 있지만 실제로 없음
+                # → 데이터 부존성 문제, 재요청 필요
                 missing_trading_days.append(current)
+        # 2. 캘린더에서 NO_DATA 표시된 날짜
+        elif current in no_data_from_calendar:
+            no_data_days.append(current)
+        # 3. 캘린더에 없는 날짜 (처음 조회)
+        elif current not in existing_dates:
+            missing_trading_days.append(current)
         
         current += timedelta(days=1)
     
@@ -228,13 +289,36 @@ class StockPriceRangeAPIView(APIView):
         """
         3. 주식 이름/심볼로 가격 검색 API
         - 주말/공휴일은 제외하고 실제 거래일 데이터만 확인
+        - 오늘 및 미래 날짜는 조회 불가
         """
         search = request.query_params.get('search')
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         
-        end_date = datetime.now().date() if not end_date_str else datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        start_date = end_date - timedelta(days=30) if not start_date_str else datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        # 날짜 파싱
+        try:
+            if end_date_str:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            else:
+                end_date = get_today() - timedelta(days=1)  # 어제
+            
+            if start_date_str:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            else:
+                start_date = end_date - timedelta(days=29)
+        except ValueError:
+            return Response({
+                "status": "error",
+                "message": "Invalid date format. Use YYYY-MM-DD format."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 조회 기간 유효성 검사
+        is_valid, error_message, start_date, end_date = validate_date_range(start_date, end_date)
+        if not is_valid:
+            return Response({
+                "status": "error",
+                "message": error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         symbol_filter = Q()
         symbols_to_check = []
@@ -375,18 +459,43 @@ class StockSymbolPriceRangeAPIView(APIView):
         5. 특정 종목의 기간별 가격 조회 API
         - 주말/공휴일은 제외하고 실제 거래일만 확인
         - 거래일에 데이터가 없는 경우에만 Yahoo Finance 요청
+        - 오늘 및 미래 날짜는 조회 불가
         """
         symbol = request.query_params.get('symbol')
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
 
-        end_date = datetime.now().date() if not end_date_str else datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        start_date = end_date - timedelta(days=30) if not start_date_str else datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        # 날짜 파싱
+        try:
+            if end_date_str:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            else:
+                # 기본값: 어제
+                end_date = get_today() - timedelta(days=1)
+            
+            if start_date_str:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            else:
+                # 기본값: 30일 전
+                start_date = end_date - timedelta(days=29)
+        except ValueError:
+            return Response({
+                "status": "error",
+                "message": "Invalid date format. Use YYYY-MM-DD format."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         if not symbol:
             return Response({
                 "status": "error",
                 "message": "symbol is a required parameter"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 조회 기간 유효성 검사
+        is_valid, error_message, start_date, end_date = validate_date_range(start_date, end_date)
+        if not is_valid:
+            return Response({
+                "status": "error",
+                "message": error_message
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # DB에서 데이터 조회
