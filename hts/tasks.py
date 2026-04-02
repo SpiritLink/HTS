@@ -75,6 +75,8 @@ def fetch_stock_data(self, request_id):
     """
     특정 DataFetchRequest를 처리하여 Yahoo Finance에서 주가 데이터를 가져옵니다.
     주말/공휴일은 캘린더에 별도 표기하고, 거래일에만 데이터를 저장합니다.
+    
+    지원 interval: 1d (일별), 1h (1시간), 30m, 15m, 5m
     """
     try:
         with transaction.atomic():
@@ -90,10 +92,11 @@ def fetch_stock_data(self, request_id):
             symbol = fetch_request.symbol
             start_date = fetch_request.start_date
             end_date = fetch_request.end_date
+            interval = fetch_request.interval  # '1d', '1h', '30m', etc.
             
             yahoo_symbol = get_yahoo_ticker_symbol(symbol)
             
-            logger.info(f"[FETCH] {symbol} ({yahoo_symbol}) | {start_date} ~ {end_date}")
+            logger.info(f"[FETCH] {symbol} ({yahoo_symbol}) | {start_date} ~ {end_date} | interval={interval}")
             
             ticker = yf.Ticker(yahoo_symbol)
             
@@ -101,7 +104,16 @@ def fetch_stock_data(self, request_id):
             start_datetime = datetime.combine(start_date, datetime.min.time())
             
             try:
-                hist = ticker.history(start=start_datetime, end=end_datetime)
+                # interval에 따라 데이터 조회 방식 변경
+                if interval == '1d':
+                    hist = ticker.history(start=start_datetime, end=end_datetime, interval='1d')
+                elif interval == '1h':
+                    # 1시간 데이터는 최대 730일까지만 제공
+                    hist = ticker.history(start=start_datetime, end=end_datetime, interval='1h')
+                elif interval in ['30m', '15m', '5m']:
+                    hist = ticker.history(start=start_datetime, end=end_datetime, interval=interval)
+                else:
+                    hist = ticker.history(start=start_datetime, end=end_datetime, interval='1d')
             except Exception as e:
                 logger.warning(f"Yahoo Finance error for {yahoo_symbol}: {e}")
                 hist = pd.DataFrame()
@@ -175,6 +187,7 @@ def fetch_stock_data(self, request_id):
                         stock=stock,
                         symbol=symbol,
                         market=stock.market,
+                        interval=interval,  # 데이터 간격 저장
                         timestamp=timestamp,
                         open_price=round(float(row['Open']), 2) if pd.notna(row['Open']) else None,
                         high_price=round(float(row['High']), 2) if pd.notna(row['High']) else None,
@@ -190,6 +203,7 @@ def fetch_stock_data(self, request_id):
                 )
                 
                 # 캘린더 업데이트 - 데이터가 있는 날짜는 TRADING으로 표시 (오늘/미래 제외)
+                # 시간 단위 데이터도 일별로 캘린더 업데이트
                 for price_date in trading_days_in_data:
                     if is_valid_date_for_calendar(price_date):
                         StockTradingCalendar.mark_day_type(
@@ -200,7 +214,8 @@ def fetch_stock_data(self, request_id):
                             has_price_data=True
                         )
                 
-                logger.info(f"[SUCCESS] {symbol}: Saved {len(price_objects)} records, {len(trading_days_in_data)} trading days")
+                interval_label = "hours" if interval != '1d' else "days"
+                logger.info(f"[SUCCESS] {symbol}: Saved {len(price_objects)} records ({interval}), {len(trading_days_in_data)} trading days")
             else:
                 logger.warning(f"[NO_DATA] {symbol}: No trading data from Yahoo Finance for {start_date} ~ {end_date}")
             

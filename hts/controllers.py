@@ -268,6 +268,7 @@ def get_incomplete_stocks(request):
     """
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
+    interval = request.GET.get('interval', '1d')  # 기본값: 일별
     
     if not start_date_str or not end_date_str:
         return JsonResponse({
@@ -290,37 +291,40 @@ def get_incomplete_stocks(request):
             'message': '시작일은 종료일보다 이전이어야 합니다.'
         }, status=400)
     
-    # 거래일 계산 (주말 제외)
-    trading_days = []
-    current = start_date
-    while current <= end_date:
-        if current.weekday() < 5:  # 월-금
-            trading_days.append(current)
-        current += timedelta(days=1)
+    # 거래일 수 계산 (주말 제외)
+    total_days = (end_date - start_date).days + 1
+    trading_days = sum(1 for d in range(total_days) 
+                      if (start_date + timedelta(days=d)).weekday() < 5)
     
-    total_trading_days = len(trading_days)
-    
-    if total_trading_days == 0:
-        return JsonResponse({
-            'success': True,
-            'stocks': [],
-            'total_trading_days': 0,
-            'message': '해당 기간에 거래일이 없습니다.'
-        })
+    # interval에 따른 예상 데이터 수 계산
+    if interval == '1d':
+        expected_count = trading_days
+    elif interval == '1h':
+        # 한국: 09:00~15:30 (6.5시간), 미국: 09:30~16:00 (6.5시간) -> 대략 7시간
+        expected_count = trading_days * 7
+    elif interval == '30m':
+        expected_count = trading_days * 7 * 2  # 시간당 2개
+    elif interval == '15m':
+        expected_count = trading_days * 7 * 4  # 시간당 4개
+    elif interval == '5m':
+        expected_count = trading_days * 7 * 12  # 시간당 12개
+    else:
+        expected_count = trading_days
     
     # 모든 종목 조회
     stocks = Stock.objects.all()
     incomplete_stocks = []
     
     for stock in stocks:
-        # 해당 기간의 데이터 수 조회
+        # 해당 기간의 해당 interval 데이터 수 조회
         data_count = StockPrice.objects.filter(
             symbol=stock.symbol,
+            interval=interval,
             timestamp__date__range=(start_date, end_date)
         ).count()
         
-        # 90% 미만인 경우만 포함 (약간의 여유 허용)
-        threshold = int(total_trading_days * 0.9)
+        # 80% 미만인 경우만 포함
+        threshold = int(expected_count * 0.8)
         
         if data_count < threshold:
             incomplete_stocks.append({
@@ -328,17 +332,19 @@ def get_incomplete_stocks(request):
                 'name': stock.name,
                 'market': stock.market,
                 'data_count': data_count,
-                'missing_days': total_trading_days - data_count,
-                'expected_days': total_trading_days
+                'expected_count': expected_count,
+                'missing_count': expected_count - data_count,
+                'fill_rate': round((data_count / expected_count) * 100, 1) if expected_count > 0 else 0
             })
     
-    # 부족률 기준으로 정렬 (데이터가 가장 적은 순)
-    incomplete_stocks.sort(key=lambda x: x['data_count'])
+    # 부족률 기준으로 정렬 (채워진 비율이 낮은 순)
+    incomplete_stocks.sort(key=lambda x: x['fill_rate'])
     
     return JsonResponse({
         'success': True,
         'stocks': incomplete_stocks,
-        'total_trading_days': total_trading_days,
+        'interval': interval,
+        'trading_days': trading_days,
         'count': len(incomplete_stocks)
     })
 
@@ -353,6 +359,7 @@ def bulk_request_prices(request):
         symbols = data.get('symbols', [])
         start_date_str = data.get('start_date')
         end_date_str = data.get('end_date')
+        interval = data.get('interval', '1d')  # 기본값: 일별
         
         if not symbols or not start_date_str or not end_date_str:
             return JsonResponse({
@@ -367,11 +374,12 @@ def bulk_request_prices(request):
         already_exists_count = 0
         
         for symbol in symbols:
-            # 이미 존재하는 요청인지 확인
+            # 이미 존재하는 요청인지 확인 (interval 포함)
             existing = DataFetchRequest.objects.filter(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
+                interval=interval,
                 status__in=['PENDING', 'PROCESSING']
             ).first()
             
@@ -379,11 +387,12 @@ def bulk_request_prices(request):
                 already_exists_count += 1
                 continue
             
-            # 새로운 요청 생성
+            # 새로운 요청 생성 (interval 포함)
             DataFetchRequest.objects.create(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
+                interval=interval,
                 status='PENDING'
             )
             registered_count += 1
@@ -392,7 +401,8 @@ def bulk_request_prices(request):
             'success': True,
             'registered_count': registered_count,
             'already_exists_count': already_exists_count,
-            'message': f'{registered_count}개 작업 등록 완료'
+            'interval': interval,
+            'message': f'{registered_count}개 작업 등록 완료 (간격: {interval})'
         })
         
     except json.JSONDecodeError:

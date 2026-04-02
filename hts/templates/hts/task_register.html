@@ -99,6 +99,34 @@
             margin-bottom: 5px;
             opacity: 0.9;
         }
+        .interval-select-wrapper {
+            margin-bottom: 15px;
+        }
+        .interval-select-wrapper label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+        .interval-select {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px;
+            font-size: 15px;
+            border: none;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .interval-note {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 6px;
+        }
         .date-input {
             width: 100%;
             padding: 12px;
@@ -289,7 +317,7 @@
 
         <!-- 기간 설정 -->
         <div class="date-filter-panel">
-            <h2>📅 조회 기간 설정</h2>
+            <h2>📅 조회 기간 및 간격 설정</h2>
             <div class="date-inputs">
                 <div class="date-input-wrapper">
                     <label for="start-date">시작일</label>
@@ -300,6 +328,19 @@
                     <label for="end-date">종료일</label>
                     <input type="date" id="end-date" class="date-input">
                 </div>
+            </div>
+            <div class="interval-select-wrapper">
+                <label for="interval-select">데이터 간격</label>
+                <select id="interval-select" class="interval-select">
+                    <option value="1d">일별 (1d) - 일 단위 데이터</option>
+                    <option value="1h">1시간 (1h) - 시간 단위 데이터</option>
+                    <option value="30m">30분 (30m) - 30분 단위 데이터</option>
+                    <option value="15m">15분 (15m) - 15분 단위 데이터</option>
+                    <option value="5m">5분 (5m) - 5분 단위 데이터</option>
+                </select>
+            </div>
+            <div class="interval-note" id="interval-limit-info">
+                💡 <strong>참고:</strong> 데이터 간격에 따라 조회 가능한 기간이 제한됩니다. <span id="limit-detail">일별 데이터는 제한이 없습니다.</span>
             </div>
             <button id="btn-search" class="btn-search" onclick="searchIncompleteStocks()">
                 🔍 불충분한 데이터 조회
@@ -322,7 +363,7 @@
         <!-- 조회 결과 -->
         <div id="results-panel" class="results-panel">
             <div class="results-header">
-                <h3 class="results-title">📋 데이터가 불충분한 종목</h3>
+                <h3 class="results-title">📋 데이터가 불충분한 종목 <small id="interval-info" style="font-size: 14px; color: #6c757d; font-weight: normal;"></small></h3>
                 <span class="results-count">
                     총 <strong id="total-count">0</strong>개 종목 중 
                     <strong id="selected-count">0</strong>개 선택
@@ -339,9 +380,9 @@
                             <th>종목코드</th>
                             <th>종목명</th>
                             <th>시장</th>
-                            <th>예상 거래일</th>
+                            <th>예상 데이터 수</th>
                             <th>보유 데이터</th>
-                            <th>부족률</th>
+                            <th>채움률</th>
                             <th>상태</th>
                         </tr>
                     </thead>
@@ -367,7 +408,54 @@
         let currentResults = [];
         let selectedStocks = new Set();
 
-        // 페이지 로드 시 기본 날짜 설정
+        // 날짜 제한 설정 함수
+        function updateDateLimits() {
+            const interval = document.getElementById('interval-select').value;
+            const today = new Date();
+            const endDateInput = document.getElementById('end-date');
+            const startDateInput = document.getElementById('start-date');
+            const limitDetail = document.getElementById('limit-detail');
+            
+            // 종료일 기본값: 어제
+            const maxEndDate = new Date(today);
+            maxEndDate.setDate(maxEndDate.getDate() - 1);
+            endDateInput.max = maxEndDate.toISOString().split('T')[0];
+            
+            let minStartDate;
+            let limitText;
+            
+            if (interval === '1h') {
+                // 1시간: 2년(730일) 전까지
+                minStartDate = new Date(today);
+                minStartDate.setDate(minStartDate.getDate() - 730);
+                limitText = '1시간 데이터는 최대 2년(730일) 전까지 조회 가능합니다.';
+            } else if (['30m', '15m', '5m'].includes(interval)) {
+                // 분 단위: 60일 전까지
+                minStartDate = new Date(today);
+                minStartDate.setDate(minStartDate.getDate() - 60);
+                limitText = '분 단위 데이터는 최대 60일 전까지 조회 가능합니다.';
+            } else {
+                // 일별: 제한 없음 (과거 데이터는 있으나 제한)
+                minStartDate = new Date('2000-01-01'); // 충분히 과거
+                limitText = '일별 데이터는 기간 제한이 없습니다.';
+            }
+            
+            // 시작일 min 속성 설정
+            startDateInput.min = minStartDate.toISOString().split('T')[0];
+            limitDetail.textContent = limitText;
+            
+            // 현재 선택된 시작일이 새로운 범위를 벗어나면 조정
+            const currentStartDate = new Date(startDateInput.value);
+            if (currentStartDate < minStartDate) {
+                // 범위를 벗어나면 자동으로 조정
+                const newStartDate = new Date(minStartDate);
+                newStartDate.setDate(newStartDate.getDate() + 1); // min보다 하루 뒤
+                startDateInput.value = newStartDate.toISOString().split('T')[0];
+                showToast(`시작일이 ${interval === '1h' ? '2년' : '60일'} 범위로 자동 조정되었습니다.`, 'info');
+            }
+        }
+
+        // 페이지 로드 시 기본 날짜 설정 및 이벤트 리스너 등록
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date();
             const endDate = new Date(today);
@@ -378,6 +466,12 @@
 
             document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
             document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+            
+            // interval 변경 시 날짜 제한 업데이트
+            document.getElementById('interval-select').addEventListener('change', updateDateLimits);
+            
+            // 초기 날짜 제한 설정
+            updateDateLimits();
         });
 
         // CSRF 토큰 가져오기
@@ -409,6 +503,7 @@
         async function searchIncompleteStocks() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
+            const interval = document.getElementById('interval-select').value;
             
             if (!startDate || !endDate) {
                 showToast('시작일과 종료일을 모두 선택해주세요.', 'error');
@@ -417,6 +512,21 @@
             
             if (new Date(startDate) > new Date(endDate)) {
                 showToast('시작일은 종료일보다 이전이어야 합니다.', 'error');
+                return;
+            }
+            
+            // 날짜 범위 검증
+            const today = new Date();
+            const selectedStart = new Date(startDate);
+            const daysDiff = Math.floor((today - selectedStart) / (1000 * 60 * 60 * 24));
+            
+            if (interval === '1h' && daysDiff > 730) {
+                showToast('1시간 데이터는 최대 2년(730일) 전까지만 조회 가능합니다.', 'error');
+                return;
+            }
+            
+            if (['30m', '15m', '5m'].includes(interval) && daysDiff > 60) {
+                showToast('분 단위 데이터는 최대 60일 전까지만 조회 가능합니다.', 'error');
                 return;
             }
 
@@ -429,12 +539,12 @@
             document.getElementById('empty-message').classList.remove('active');
 
             try {
-                const response = await fetch(`/hts/api/stocks/incomplete-data/?start_date=${startDate}&end_date=${endDate}`);
+                const response = await fetch(`/hts/api/stocks/incomplete-data/?start_date=${startDate}&end_date=${endDate}&interval=${interval}`);
                 const data = await response.json();
                 
                 if (data.success) {
                     currentResults = data.stocks;
-                    renderResults(data.stocks, data.total_trading_days);
+                    renderResults(data);
                 } else {
                     showToast(data.message || '조회 중 오류가 발생했습니다.', 'error');
                 }
@@ -448,7 +558,8 @@
         }
 
         // 결과 렌더링
-        function renderResults(stocks, totalTradingDays) {
+        function renderResults(data) {
+            const stocks = data.stocks;
             const tbody = document.getElementById('results-tbody');
             tbody.innerHTML = '';
             selectedStocks.clear();
@@ -458,13 +569,37 @@
                 return;
             }
 
+            const intervalLabels = {
+                '1d': '일별',
+                '1h': '1시간',
+                '30m': '30분',
+                '15m': '15분',
+                '5m': '5분'
+            };
+            const intervalUnits = {
+                '1d': '일',
+                '1h': '시간',
+                '30m': '개',
+                '15m': '개',
+                '5m': '개'
+            };
+            
+            const intervalName = intervalLabels[data.interval] || data.interval;
+            const intervalUnit = intervalUnits[data.interval] || '개';
+            
+            // 간격 정보 표시
+            document.getElementById('interval-info').textContent = `(${intervalName} 기준, 거래일: ${data.trading_days}일)`;
+            
             stocks.forEach(stock => {
                 const tr = document.createElement('tr');
-                const missingRate = Math.round((stock.missing_days / totalTradingDays) * 100);
+                const fillRate = stock.fill_rate;
                 
                 let statusClass = 'data-status-missing';
                 let statusText = '부족';
-                if (missingRate < 30) {
+                if (fillRate >= 80) {
+                    statusClass = 'data-status-ok';
+                    statusText = '완료';
+                } else if (fillRate >= 50) {
                     statusClass = 'data-status-partial';
                     statusText = '일부부족';
                 }
@@ -474,9 +609,9 @@
                     <td><strong>${stock.symbol}</strong></td>
                     <td>${stock.name}</td>
                     <td>${stock.market}</td>
-                    <td>${totalTradingDays}일</td>
-                    <td>${stock.data_count}일</td>
-                    <td>${stock.missing_days}일 (${missingRate}%)</td>
+                    <td>${stock.expected_count}${intervalUnit}</td>
+                    <td>${stock.data_count}${intervalUnit}</td>
+                    <td>${fillRate}%</td>
                     <td><span class="data-status ${statusClass}">${statusText}</span></td>
                 `;
                 tbody.appendChild(tr);
@@ -539,6 +674,7 @@
 
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
+            const interval = document.getElementById('interval-select').value;
             const symbols = Array.from(selectedStocks);
 
             const btn = document.querySelector('#action-panel .btn-primary');
@@ -558,7 +694,8 @@
                     body: JSON.stringify({
                         symbols: symbols,
                         start_date: startDate,
-                        end_date: endDate
+                        end_date: endDate,
+                        interval: interval
                     })
                 });
                 
