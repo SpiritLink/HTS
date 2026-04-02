@@ -15,6 +15,19 @@
         .btn-search:hover {
             background: white;
         }
+
+        /* 종목 정보 갱신 패널 (주황색 계열) */
+        .update-panel {
+            background: linear-gradient(135deg, #f83600 0%, #f9d423 100%);
+            color: white;
+        }
+        .btn-update {
+            background: rgba(255,255,255,0.95);
+            color: #f83600;
+        }
+        .btn-update:hover {
+            background: white;
+        }
 {% endblock %}
 
 {% block content %}
@@ -28,8 +41,17 @@
         <div class="menu-panel search-panel">
             <h2>🔎 주식 검색</h2>
             <p>종목명으로 원하는 주식을 검색하거나 전체 목록에서 조회할 수 있습니다. 검색 결과에서 바로 차트를 확인하고 상세 정보를 조회할 수 있습니다.</p>
-            <a href="{% url 'hts:stock_list' %}" class="btn-menu btn-search">
+            <a href="{% url 'hts:stock_list' %}" class="btn-menu btn-search" onclick="localStorage.removeItem('stockListPage');">
                 🔎 주식 검색/조회하기
+            </a>
+        </div>
+
+        <!-- 2. 종목 정보 갱신 -->
+        <div class="menu-panel update-panel">
+            <h2>🔄 종목 정보 갱신</h2>
+            <p>Nasdaq에서 제공하는 공식 데이터를 활용하여 DB의 종목 정보를 갱신합니다. 새로운 상장 종목이나 변경된 정보를 업데이트할 수 있습니다.</p>
+            <a href="{% url 'hts:stock_update' %}" class="btn-menu btn-update">
+                🔄 종목 정보 갱신하기
             </a>
         </div>
     </div>

@@ -490,6 +490,7 @@ class StockSymbolPriceRangeAPIView(APIView):
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
+                interval=interval,
                 status__in=['PENDING', 'PROCESSING']
             ).first()
             
@@ -500,10 +501,13 @@ class StockSymbolPriceRangeAPIView(APIView):
                     "requested_at": existing_pending.created_at
                 }, status=status.HTTP_202_ACCEPTED)
             
-            DataFetchRequest.objects.create(
+            # get_or_create로 중복 방지
+            DataFetchRequest.objects.get_or_create(
                 symbol=symbol,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
+                interval=interval,
+                defaults={'status': 'PENDING'}
             )
             return Response({
                 "status": "accepted",

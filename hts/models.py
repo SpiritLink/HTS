@@ -20,8 +20,10 @@ class Stock(models.Model):
     주식 이름으로 검색할 수 있도록 별도 분리합니다.
     """
     symbol = models.CharField(max_length=20, unique=True, db_index=True)
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=200, db_index=True)
     market = models.CharField(max_length=10, db_index=True, default='KR')
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     
     def __str__(self):
         return f"[{self.market}] {self.name} ({self.symbol})"

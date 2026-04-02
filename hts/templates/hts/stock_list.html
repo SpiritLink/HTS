@@ -107,7 +107,8 @@
         .market-badge-kospi { background-color: #dc3545; color: #fff; }
         .market-badge-kosdaq { background-color: #0066ff; color: #fff; }
         .market-badge-nasdaq { background-color: #6f42c1; color: #fff; }
-        .market-badge-us { background-color: #6c757d; color: #fff; }
+        .market-badge-nyse { background-color: #004ea2; color: #fff; }
+        .market-badge-amex { background-color: #17a2b8; color: #fff; }
         .market-badge-default { background-color: #e9ecef; color: #495057; }
         .table-krds td:nth-child(3) { text-align: left; }
 
@@ -216,7 +217,8 @@
         .search-badge-kospi { background-color: #dc3545; color: #fff; }
         .search-badge-kosdaq { background-color: #0066ff; color: #fff; }
         .search-badge-nasdaq { background-color: #6f42c1; color: #fff; }
-        .search-badge-us { background-color: #6c757d; color: #fff; }
+        .search-badge-nyse { background-color: #004ea2; color: #fff; }
+        .search-badge-amex { background-color: #17a2b8; color: #fff; }
         .search-badge-default { background-color: #e9ecef; color: #495057; }
         
         .search-no-results { 
@@ -282,7 +284,9 @@
                     <option value="ALL">전체 시장</option>
                     <option value="KR">한국 (KOSPI)</option>
                     <option value="KQ">한국 (KOSDAQ)</option>
-                    <option value="US">미국 (NASDAQ/NYSE)</option>
+                    <option value="NASDAQ">미국 (NASDAQ)</option>
+                    <option value="NYSE">미국 (NYSE)</option>
+                    <option value="AMEX">미국 (AMEX)</option>
                 </select>
                 <span id="market-filter-info" style="font-size: 13px; color: #6c757d; padding-top: 10px;">총 <strong id="total-count">0</strong>개 종목</span>
             </div>
@@ -362,13 +366,22 @@
                         return stockMarket === 'KR' || stockMarket === 'KOSPI';
                     } else if (market === 'KQ') {
                         return stockMarket === 'KQ' || stockMarket === 'KOSDAQ';
-                    } else if (market === 'US') {
-                        return stockMarket === 'US' || stockMarket === 'NASDAQ' || stockMarket === 'NYSE' || stockMarket === 'AMEX';
+                    } else if (market === 'NASDAQ') {
+                        return stockMarket === 'NASDAQ';
+                    } else if (market === 'NYSE') {
+                        return stockMarket === 'NYSE';
+                    } else if (market === 'AMEX') {
+                        return stockMarket === 'AMEX';
                     }
                     return false;
                 });
             }
             currentPage = 1;
+            localStorage.setItem('stockListPage', 1);
+            // URL에서 page 파라미터 제거
+            const url = new URL(window.location);
+            url.searchParams.delete('page');
+            window.history.pushState({}, '', url);
             document.getElementById('total-count').textContent = filteredStocks.length;
             renderTable();
         }
@@ -406,7 +419,7 @@
                     if (data.status === 'success' && data.data && data.data.length > 0) {
                         allStocks = data.data;
                         filteredStocks = [...allStocks];
-                        currentPage = 1;
+                        // URL에서 설정된 currentPage 유지
                         document.getElementById('total-count').textContent = filteredStocks.length;
                         renderTable();
                     } else {
@@ -461,9 +474,12 @@
                 } else if (marketUpper === 'NASDAQ') {
                     marketClass = 'market-badge-nasdaq';
                     marketName = 'NASDAQ';
-                } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
-                    marketClass = 'market-badge-us';
-                    marketName = marketUpper === 'US' ? 'US' : marketUpper;
+                } else if (marketUpper === 'NYSE') {
+                    marketClass = 'market-badge-nyse';
+                    marketName = 'NYSE';
+                } else if (marketUpper === 'AMEX') {
+                    marketClass = 'market-badge-amex';
+                    marketName = 'AMEX';
                 }
 
                 tr.innerHTML = `
@@ -490,6 +506,10 @@
         function changePage(delta) {
             currentPage += delta;
             localStorage.setItem('stockListPage', currentPage);
+            // URL 업데이트
+            const url = new URL(window.location);
+            url.searchParams.set('page', currentPage);
+            window.history.pushState({}, '', url);
             renderTable();
         }
 
@@ -600,8 +620,10 @@
                 return { badgeClass: 'search-badge-kosdaq', marketName: 'KOSDAQ' };
             } else if (marketUpper === 'NASDAQ') {
                 return { badgeClass: 'search-badge-nasdaq', marketName: 'NASDAQ' };
-            } else if (marketUpper === 'US' || marketUpper === 'NYSE' || marketUpper === 'AMEX') {
-                return { badgeClass: 'search-badge-us', marketName: marketUpper === 'US' ? 'US' : marketUpper };
+            } else if (marketUpper === 'NYSE') {
+                return { badgeClass: 'search-badge-nyse', marketName: 'NYSE' };
+            } else if (marketUpper === 'AMEX') {
+                return { badgeClass: 'search-badge-amex', marketName: 'AMEX' };
             }
             
             return { badgeClass: 'search-badge-default', marketName: market };
