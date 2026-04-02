@@ -237,25 +237,68 @@
             chartLoader.style.display = 'block';
             chartLoader.textContent = "주가 데이터를 불러오는 중입니다...";
 
-            // 날짜 계산 (최근 1달)
+            // 날짜 계산 (최근 1달) - YYYY-MM-DD 포맷
             const endDate = new Date();
             const startDate = new Date();
             startDate.setMonth(startDate.getMonth() - 1);
 
-            const endIsoStr = endDate.toISOString();
-            const startIsoStr = startDate.toISOString();
+            const endDateStr = endDate.toISOString().split('T')[0];
+            const startDateStr = startDate.toISOString().split('T')[0];
 
-            // API 호출
-            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_time=${encodeURIComponent(startIsoStr)}&end_time=${encodeURIComponent(endIsoStr)}`)
+            // API 호출 (새로운 API 엔드포인트 사용)
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_date=${startDateStr}&end_date=${endDateStr}`)
                 .then(response => response.json())
                 .then(data => {
-                    chartLoader.style.display = 'none';
-                    canvasElement.style.display = 'block';
-
-                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                    if ((data.status === 'success' || data.status === 'partial') && data.data && data.data.length > 0) {
+                        // 데이터 있음 - 차트 렌더링
+                        chartLoader.style.display = 'none';
+                        canvasElement.style.display = 'block';
                         const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                         renderChart(sortedData, stock.name);
+                        
+                        // 누락된 데이터가 있는 경우 모달 내에 알림 표시
+                        if (data.status === 'partial' && data.missing_data) {
+                            const modalContent = document.querySelector('.modal-content');
+                            // 기존 알림이 있으면 제거
+                            const existingNotice = modalContent.querySelector('.missing-data-notice');
+                            if (existingNotice) existingNotice.remove();
+                            
+                            const missingNotice = document.createElement('div');
+                            missingNotice.className = 'missing-data-notice';
+                            missingNotice.style.cssText = 'margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 12px; color: #856404; text-align: center;';
+                            missingNotice.innerHTML = `
+                                <strong>⚠️ 일부 데이터 누락</strong> - ${data.missing_data.message}
+                            `;
+                            modalContent.appendChild(missingNotice);
+                        }
+                    } else if (data.status === 'pending') {
+                        // 이미 큐에 있음 - 적재 중 메시지
+                        canvasElement.style.display = 'none';
+                        chartLoader.style.display = 'block';
+                        chartLoader.innerHTML = `
+                            <div style="color: #004ea2; font-weight: bold; margin-bottom: 8px;">
+                                ⏳ 데이터 적재 중
+                            </div>
+                            <div style="font-size: 13px; color: #666;">
+                                ${data.message}<br>
+                                <small>잠시 후 다시 조회해 주세요.</small>
+                            </div>
+                        `;
+                    } else if (data.status === 'accepted') {
+                        // 새로 큐에 추가됨 - 요청 완료 메시지
+                        canvasElement.style.display = 'none';
+                        chartLoader.style.display = 'block';
+                        chartLoader.innerHTML = `
+                            <div style="color: #28a745; font-weight: bold; margin-bottom: 8px;">
+                                ✅ 데이터 요청 완룛
+                            </div>
+                            <div style="font-size: 13px; color: #666;">
+                                ${data.message}<br>
+                                <small>주가 정보를 가져오는 중입니다. 잠시 후 다시 조회해 주세요.</small>
+                            </div>
+                        `;
                     } else {
+                        // 기타 상황
                         renderChart([], stock.name);
                         chartLoader.style.display = 'block';
                         chartLoader.textContent = "최근 1달간의 주가 데이터가 없습니다.";
@@ -263,8 +306,17 @@
                 })
                 .catch(error => {
                     console.error('Error fetching price data:', error);
+                    canvasElement.style.display = 'none';
                     chartLoader.style.display = 'block';
-                    chartLoader.textContent = "주가 데이터를 불러오는 중 오류가 발생했습니다.";
+                    chartLoader.innerHTML = `
+                        <div style="color: #dc3545; font-weight: bold; margin-bottom: 8px;">
+                            ❌ 오류 발생
+                        </div>
+                        <div style="font-size: 13px; color: #666;">
+                            주가 데이터를 불러오는 중 오류가 발생했습니다.<br>
+                            <small>나중에 다시 시도해 주세요.</small>
+                        </div>
+                    `;
                 });
         }
 

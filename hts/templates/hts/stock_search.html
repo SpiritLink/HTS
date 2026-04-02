@@ -14,7 +14,11 @@
         .btn-secondary { background-color: #fff; color: #495057; border: 1px solid #ced4da; padding: 6px 12px; border-radius: 6px; font-size: 13px; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
         .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
 
-        .search-container { position: relative; margin-bottom: 30px; }
+        .btn-primary { background-color: #004ea2; color: #fff; border: 1px solid #004ea2; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: #003a79; }
+        .btn-primary:disabled { background-color: #adb5bd; border-color: #adb5bd; cursor: not-allowed; }
+
+        .search-container { position: relative; margin-bottom: 20px; }
         .search-input { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #004ea2; border-radius: 8px; box-sizing: border-box; outline: none; }
         .search-input:focus { box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.2); }
 
@@ -23,6 +27,107 @@
         .autocomplete-list li { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid #f1f3f5; display: flex; align-items: center; font-size: 14px; word-break: keep-all; }
         .autocomplete-list li:last-child { border-bottom: none; }
         .autocomplete-list li:hover { background-color: #f8f9fa; }
+
+        /* 날짜 선택 영역 스타일 */
+        .date-filter-container {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .date-filter-container.active { display: block; }
+        .date-filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .date-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .date-input-wrapper {
+            flex: 1;
+            min-width: 130px;
+        }
+        .date-input-wrapper label {
+            display: block;
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        .date-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+        .date-input:focus { border-color: #004ea2; box-shadow: 0 0 0 2px rgba(0, 78, 162, 0.15); }
+        .date-separator {
+            color: #6c757d;
+            font-size: 14px;
+            padding: 20px 0 0 0;
+        }
+        .date-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .preset-btn {
+            background-color: #fff;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .preset-btn:hover {
+            background-color: #004ea2;
+            color: #fff;
+            border-color: #004ea2;
+        }
+
+        /* 선택된 종목 정보 */
+        .selected-stock-info {
+            background-color: #e9f2ff;
+            border: 1px solid #004ea2;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .selected-stock-info.active { display: flex; }
+        .selected-stock-name {
+            font-weight: 600;
+            color: #004ea2;
+            font-size: 15px;
+        }
+        .selected-stock-symbol {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        .change-stock-btn {
+            background: none;
+            border: none;
+            color: #004ea2;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
 
         /* 선택된 결과 표시 영역 */
         .result-card { background-color: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; display: none; margin-top: 15px; box-sizing: border-box; }
@@ -40,6 +145,9 @@
             .btn-secondary { font-size: 12px; padding: 5px 10px; }
             .search-input { font-size: 15px; padding: 12px; }
             .result-header h2 { font-size: 18px; }
+            .date-inputs { flex-direction: column; align-items: stretch; }
+            .date-separator { text-align: center; padding: 5px 0; }
+            .date-input-wrapper { min-width: auto; }
         }
     </style>
 </head>
@@ -50,9 +158,45 @@
             <a href="{% url 'hts:info_lookup' %}" class="btn-secondary">뒤로가기</a>
         </h1>
 
-        <div class="search-container">
+        <!-- 종목 검색 -->
+        <div class="search-container" id="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="종목명을 입력하세요 (예: 삼성전자)" autocomplete="off">
             <ul id="autocomplete-list" class="autocomplete-list"></ul>
+        </div>
+
+        <!-- 선택된 종목 표시 -->
+        <div id="selected-stock-info" class="selected-stock-info">
+            <div>
+                <span id="selected-stock-name" class="selected-stock-name"></span>
+                <span id="selected-stock-symbol" class="selected-stock-symbol"></span>
+            </div>
+            <button class="change-stock-btn" onclick="changeStock()">종목 변경</button>
+        </div>
+
+        <!-- 날짜 선택 영역 -->
+        <div id="date-filter-container" class="date-filter-container">
+            <span class="date-filter-label">📅 조회 기간 선택</span>
+            <div class="date-inputs">
+                <div class="date-input-wrapper">
+                    <label for="start-date">시작일</label>
+                    <input type="date" id="start-date" class="date-input">
+                </div>
+                <span class="date-separator">~</span>
+                <div class="date-input-wrapper">
+                    <label for="end-date">종료일</label>
+                    <input type="date" id="end-date" class="date-input">
+                </div>
+            </div>
+            <div class="date-presets">
+                <button class="preset-btn" onclick="setPresetDate(7)">1주일</button>
+                <button class="preset-btn" onclick="setPresetDate(30)">1개월</button>
+                <button class="preset-btn" onclick="setPresetDate(90)">3개월</button>
+                <button class="preset-btn" onclick="setPresetDate(180)">6개월</button>
+                <button class="preset-btn" onclick="setPresetDate(365)">1년</button>
+            </div>
+            <button id="search-btn" class="btn-primary" style="width: 100%; margin-top: 15px;" onclick="searchWithDateRange()">
+                조회하기
+            </button>
         </div>
 
         <div id="result-card" class="result-card">
@@ -62,7 +206,9 @@
                 <p>종목 심볼: <strong id="result-symbol"></strong></p>
             </div>
 
-            <h3 style="font-size: 15px; margin-bottom: 10px; text-align: center; color: #333;">최근 1달 주가 추이 (최고/최저가)</h3>
+            <h3 style="font-size: 15px; margin-bottom: 10px; text-align: center; color: #333;">
+                <span id="chart-period-label">최근 1달 주가 추이</span>
+            </h3>
             <div id="chart-loader" class="loader">주가 데이터를 불러오는 중입니다...</div>
             <div class="chart-container">
                 <canvas id="priceChart"></canvas>
@@ -75,10 +221,46 @@
         const autocompleteList = document.getElementById('autocomplete-list');
         const resultCard = document.getElementById('result-card');
         const chartLoader = document.getElementById('chart-loader');
+        const dateFilterContainer = document.getElementById('date-filter-container');
+        const selectedStockInfo = document.getElementById('selected-stock-info');
+        const searchContainer = document.getElementById('search-container');
 
         let debounceTimer;
-        let priceChartInstance = null; // 차트 인스턴스 저장용
+        let priceChartInstance = null;
+        let currentStock = null;
 
+        // 페이지 로드 시 기본 날짜 설정 (최근 1달)
+        function initDefaultDates() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+        }
+
+        // 프리셋 버튼 클릭 시 날짜 설정
+        function setPresetDate(days) {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+        }
+
+        // 종목 변경
+        function changeStock() {
+            currentStock = null;
+            selectedStockInfo.classList.remove('active');
+            dateFilterContainer.classList.remove('active');
+            resultCard.style.display = 'none';
+            searchContainer.style.display = 'block';
+            searchInput.value = '';
+            searchInput.focus();
+        }
+
+        // 검색 입력 이벤트
         searchInput.addEventListener('input', function() {
             const query = this.value.trim();
 
@@ -89,7 +271,6 @@
                 return;
             }
 
-            // 사용자가 입력을 멈추고 300ms 후에 API 요청 (Debouncing)
             debounceTimer = setTimeout(() => {
                 fetch(`/hts/search_stocks/?q=${encodeURIComponent(query)}`)
                     .then(response => response.json())
@@ -104,11 +285,8 @@
                                     <span><strong>${stock.name}</strong> <span style="color:#6c757d; font-size:12px;">(${stock.symbol})</span></span>
                                 `;
 
-                                // 리스트 아이템 클릭 시 이벤트
                                 li.addEventListener('click', function() {
-                                    searchInput.value = stock.name;
-                                    autocompleteList.style.display = 'none';
-                                    showResult(stock);
+                                    selectStock(stock);
                                 });
 
                                 autocompleteList.appendChild(li);
@@ -125,80 +303,159 @@
             }, 300);
         });
 
-        // 검색 결과 카드 표시 및 차트 데이터 로드 함수
-        function showResult(stock) {
-            // 헤더 정보 업데이트
+        // 종목 선택
+        function selectStock(stock) {
+            currentStock = stock;
+            searchInput.value = stock.name;
+            autocompleteList.style.display = 'none';
+
+            // 검색창 숨기고 선택된 종목 표시
+            searchContainer.style.display = 'none';
+            document.getElementById('selected-stock-name').textContent = stock.name;
+            document.getElementById('selected-stock-symbol').textContent = `(${stock.symbol})`;
+            selectedStockInfo.classList.add('active');
+
+            // 날짜 선택 영역 표시
+            dateFilterContainer.classList.add('active');
+
+            // 기본 날짜로 바로 조회
+            initDefaultDates();
+            searchWithDateRange();
+        }
+
+        // 날짜 범위로 조회
+        function searchWithDateRange() {
+            if (!currentStock) return;
+
+            const startDateStr = document.getElementById('start-date').value;
+            const endDateStr = document.getElementById('end-date').value;
+
+            if (!startDateStr || !endDateStr) {
+                alert('시작일과 종료일을 모두 선택해주세요.');
+                return;
+            }
+
+            if (new Date(startDateStr) > new Date(endDateStr)) {
+                alert('시작일은 종료일보다 이전이어야 합니다.');
+                return;
+            }
+
+            // 차트 기간 라벨 업데이트
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            document.getElementById('chart-period-label').textContent = 
+                `${startDateStr} ~ ${endDateStr} (${diffDays}일)`;
+
+            showResult(currentStock, startDateStr, endDateStr);
+        }
+
+        // 검색 결과 카드 표시 및 차트 데이터 로드
+        function showResult(stock, startDateStr, endDateStr) {
             document.getElementById('result-market').textContent = stock.market;
             document.getElementById('result-name').textContent = stock.name;
             document.getElementById('result-symbol').textContent = stock.symbol;
 
             resultCard.style.display = 'block';
 
-            // 기존 차트가 있다면 파괴
             if (priceChartInstance) {
                 priceChartInstance.destroy();
             }
 
-            // 날짜 계산 (현재부터 1달 전)
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(startDate.getMonth() - 1);
-
-            const endIsoStr = endDate.toISOString();
-            const startIsoStr = startDate.toISOString();
-
             chartLoader.style.display = 'block';
+            chartLoader.innerHTML = '<div>주가 데이터를 불러오는 중입니다...</div>';
             document.getElementById('priceChart').style.display = 'none';
 
-            // api/prices/symbol/range/ 엔드포인트 호출
-            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_time=${encodeURIComponent(startIsoStr)}&end_time=${encodeURIComponent(endIsoStr)}`)
+            // API 호출
+            fetch(`/api/prices/symbol/range/?symbol=${encodeURIComponent(stock.symbol)}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}`)
                 .then(response => response.json())
                 .then(data => {
-                    chartLoader.style.display = 'none';
-                    document.getElementById('priceChart').style.display = 'block';
-
-                    if (data.status === 'success' && data.data && data.data.length > 0) {
-                        // 시간순으로 정렬 (오래된 날짜가 먼저 오도록)
+                    if ((data.status === 'success' || data.status === 'partial') && data.data && data.data.length > 0) {
+                        chartLoader.style.display = 'none';
+                        document.getElementById('priceChart').style.display = 'block';
                         const sortedData = data.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
                         renderChart(sortedData, stock.name);
+                        
+                        // 누락된 데이터가 있는 경우 알림 표시
+                        if (data.status === 'partial' && data.missing_data) {
+                            const missingMsg = document.createElement('div');
+                            missingMsg.id = 'missing-data-notice';
+                            missingMsg.style.cssText = 'margin-top: 15px; padding: 12px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 13px; color: #856404;';
+                            missingMsg.innerHTML = `
+                                <strong>⚠️ 일부 데이터 누락</strong><br>
+                                ${data.missing_data.message}<br>
+                                <small>누락된 기간의 데이터는 백그라운드에서 자동으로 가져오고 있습니다. 잠시 후 다시 조회하시면 완전한 데이터를 확인하실 수 있습니다.</small>
+                            `;
+                            // 기존 알림이 있으면 제거
+                            const existingNotice = document.getElementById('missing-data-notice');
+                            if (existingNotice) existingNotice.remove();
+                            resultCard.appendChild(missingMsg);
+                        }
+                    } else if (data.status === 'pending') {
+                        document.getElementById('priceChart').style.display = 'none';
+                        chartLoader.style.display = 'block';
+                        chartLoader.innerHTML = `
+                            <div style="color: #004ea2; font-weight: bold; margin-bottom: 8px;">
+                                ⏳ 데이터 적재 중
+                            </div>
+                            <div style="font-size: 13px; color: #666;">
+                                ${data.message}<br>
+                                <small>잠시 후 다시 조회해 주세요.</small>
+                            </div>
+                        `;
+                    } else if (data.status === 'accepted') {
+                        document.getElementById('priceChart').style.display = 'none';
+                        chartLoader.style.display = 'block';
+                        chartLoader.innerHTML = `
+                            <div style="color: #28a745; font-weight: bold; margin-bottom: 8px;">
+                                ✅ 데이터 요청 완료
+                            </div>
+                            <div style="font-size: 13px; color: #666;">
+                                ${data.message}<br>
+                                <small>주가 정보를 가져오는 중입니다. 잠시 후 다시 조회해 주세요.</small>
+                            </div>
+                        `;
                     } else {
-                        // 데이터가 없을 경우 빈 차트 렌더링
                         renderChart([], stock.name);
                         chartLoader.style.display = 'block';
-                        chartLoader.textContent = "최근 1달간의 주가 데이터가 없습니다.";
+                        chartLoader.textContent = "해당 기간의 주가 데이터가 없습니다.";
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching price data:', error);
+                    document.getElementById('priceChart').style.display = 'none';
                     chartLoader.style.display = 'block';
-                    chartLoader.textContent = "주가 데이터를 불러오는 중 오류가 발생했습니다.";
+                    chartLoader.innerHTML = `
+                        <div style="color: #dc3545; font-weight: bold; margin-bottom: 8px;">
+                            ❌ 오류 발생
+                        </div>
+                        <div style="font-size: 13px; color: #666;">
+                            주가 데이터를 불러오는 중 오류가 발생했습니다.<br>
+                            <small>나중에 다시 시도해 주세요.</small>
+                        </div>
+                    `;
                 });
         }
 
-        // Chart.js를 이용한 봉 차트(Bar Chart 모방) 렌더링 함수
+        // Chart.js 렌더링 함수
         function renderChart(priceData, stockName) {
             const ctx = document.getElementById('priceChart').getContext('2d');
 
             const labels = priceData.map(item => {
                 const date = new Date(item.timestamp);
-                return `${date.getMonth() + 1}/${date.getDate()}`; // MM/DD 형식
+                return `${date.getMonth() + 1}/${date.getDate()}`;
             });
 
-            // 한국 주식 시장 기준: 종가 >= 시가 이면 빨간색(상승), 종가 < 시가 이면 파란색(하락)
             const colors = priceData.map(item => {
                 return item.close_price >= item.open_price ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
             });
 
-            // Floating Bar Chart 데이터 포맷: [최저가, 최고가]
             const barData = priceData.map(item => {
-                // high_price와 low_price가 없으면 close_price로 대체하여 에러 방지
                 const low = item.low_price !== null ? item.low_price : item.close_price;
                 const high = item.high_price !== null ? item.high_price : item.close_price;
                 return [low, high];
             });
 
-            // 종가 데이터를 연결하는 선(Line) 추가 (추세 파악 용도)
             const closePrices = priceData.map(item => item.close_price);
 
             priceChartInstance = new Chart(ctx, {
@@ -221,7 +478,7 @@
                             data: closePrices,
                             borderColor: '#343a40',
                             borderWidth: 2,
-                            pointRadius: 2, // 모바일 고려 점 크기 축소
+                            pointRadius: 2,
                             pointBackgroundColor: '#fff',
                             pointBorderColor: '#343a40',
                             fill: false,
@@ -248,13 +505,11 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    // Bar 차트 툴팁 (context.datasetIndex === 0)
                                     if (context.datasetIndex === 0) {
                                         const low = context.raw[0].toLocaleString();
                                         const high = context.raw[1].toLocaleString();
-                                        return `범위: ${low} ~ ${high}원`; // 모바일 텍스트 길이 축소
+                                        return `범위: ${low} ~ ${high}원`;
                                     }
-                                    // Line 차트 툴팁 (context.datasetIndex === 1)
                                     return `종가: ${context.raw.toLocaleString()}원`;
                                 }
                             }
@@ -262,10 +517,8 @@
                     },
                     scales: {
                         x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: { font: { size: 10 }, maxTicksLimit: 8 } // x축 라벨 겹침 방지
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, maxTicksLimit: 8 }
                         },
                         y: {
                             beginAtZero: false,
@@ -287,6 +540,9 @@
                 autocompleteList.style.display = 'none';
             }
         });
+
+        // 초기화
+        initDefaultDates();
     </script>
 </body>
 </html>

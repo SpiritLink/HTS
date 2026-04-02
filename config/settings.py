@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 # BASE_DIR 설정 (프로젝트 최상위 디렉토리)
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
     
     # Third-party apps
     'rest_framework',
+    'django_celery_beat',
     
     # 직접 만든 앱 등록
     'hts',
@@ -118,4 +120,36 @@ REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
+}
+
+# ==========================================
+# Celery 설정
+# ==========================================
+
+# Redis를 브로커로 사용
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
+# 직렬화 설정
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# 타임존 설정
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery Beat 스케줄 설정
+CELERY_BEAT_SCHEDULE = {
+    # 1분마다 PENDING 상태의 요청 처리
+    'process-pending-fetch-requests': {
+        'task': 'hts.tasks.process_pending_fetch_requests',
+        'schedule': 60.0,  # 60초
+    },
+    # 매일 새벽 3시에 오래된 완료된 요청 정리
+    'cleanup-old-requests': {
+        'task': 'hts.tasks.cleanup_old_completed_requests',
+        'schedule': timedelta(days=1),
+        'kwargs': {'days': 7},  # 7일 이상 지난 요청 삭제
+    },
 }
