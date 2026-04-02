@@ -145,45 +145,28 @@ def task_register_view(request):
 
 
 def task_queue_list_view(request):
-    """가격 조회 큐 조회 페이지 (페이지네이션)"""
-    # 필터 파라미터 받기
-    status_filter = request.GET.get('status', '')
+    """가격 조회 큐 조회 페이지 (FAILED와 non-FAILED 분리 표시)"""
+    # 필터 파라미터 받기 (심볼 필터는 계속 지원)
     symbol_filter = request.GET.get('symbol', '')
     
-    # 기본 쿼리셋
-    tasks = DataFetchRequest.objects.all().order_by('-created_at')
+    # FAILED가 아닌 작업 (PENDING, PROCESSING, COMPLETED) - 최근 20개
+    non_failed_tasks = DataFetchRequest.objects.exclude(
+        status='FAILED'
+    ).order_by('-created_at')
     
-    # 필터 적용
-    if status_filter:
-        tasks = tasks.filter(status=status_filter)
+    # FAILED 작업 - 최근 20개
+    failed_tasks = DataFetchRequest.objects.filter(
+        status='FAILED'
+    ).order_by('-created_at')
+    
+    # 심볼 필터 적용
     if symbol_filter:
-        tasks = tasks.filter(symbol__icontains=symbol_filter)
+        non_failed_tasks = non_failed_tasks.filter(symbol__icontains=symbol_filter)
+        failed_tasks = failed_tasks.filter(symbol__icontains=symbol_filter)
     
-    # 페이지네이션 설정 (페이지당 10개)
-    paginator = Paginator(tasks, 10)
-    page = request.GET.get('page', 1)
-    
-    try:
-        tasks_page = paginator.page(page)
-    except PageNotAnInteger:
-        tasks_page = paginator.page(1)
-    except EmptyPage:
-        tasks_page = paginator.page(paginator.num_pages)
-    
-    # 페이지 범위 계산 (현재 페이지 주변 2페이지씩 표시)
-    current_page = tasks_page.number
-    total_pages = paginator.num_pages
-    
-    page_range = []
-    if total_pages <= 7:
-        page_range = list(range(1, total_pages + 1))
-    else:
-        if current_page <= 3:
-            page_range = list(range(1, 6)) + ['...', total_pages]
-        elif current_page >= total_pages - 2:
-            page_range = [1, '...'] + list(range(total_pages - 4, total_pages + 1))
-        else:
-            page_range = [1, '...'] + list(range(current_page - 1, current_page + 2)) + ['...', total_pages]
+    # 각각 상위 20개로 제한
+    non_failed_tasks = non_failed_tasks[:20]
+    failed_tasks = failed_tasks[:20]
     
     # 상태별 개수 집계
     total_count = DataFetchRequest.objects.count()
@@ -193,9 +176,8 @@ def task_queue_list_view(request):
     failed_count = DataFetchRequest.objects.filter(status='FAILED').count()
     
     context = {
-        'tasks': tasks_page,
-        'page_range': page_range,
-        'current_status': status_filter,
+        'non_failed_tasks': non_failed_tasks,
+        'failed_tasks': failed_tasks,
         'current_symbol': symbol_filter,
         'total_count': total_count,
         'pending_count': pending_count,
@@ -221,6 +203,77 @@ def retry_failed_task(request, task_id):
         return JsonResponse({'success': False, 'message': 'FAILED 상태의 작업만 재시작할 수 있습니다.'})
     except DataFetchRequest.DoesNotExist:
         return JsonResponse({'success': False, 'message': '작업을 찾을 수 없습니다.'})
+
+
+@require_POST
+def retry_all_failed(request):
+    """모든 FAILED 상태의 작업을 PENDING으로 변경"""
+    try:
+        failed_tasks = DataFetchRequest.objects.filter(status='FAILED')
+        count = failed_tasks.count()
+        
+        if count == 0:
+            return JsonResponse({
+                'success': True,
+                'count': 0,
+                'message': 'FAILED 상태의 작업이 없습니다.'
+            })
+        
+        # FAILED -> PENDING 상태 변경
+        failed_tasks.update(status='PENDING')
+        
+        # Celery 큐에 등록
+        for task in failed_tasks:
+            fetch_stock_data.delay(task.id)
+        
+        return JsonResponse({
+            'success': True,
+            'count': count,
+            'message': f'{count}개의 FAILED 작업을 PENDING 상태로 변경하고 큐에 등록했습니다.'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'재시도 중 오류 발생: {str(e)}'
+        }, status=500)
+
+
+@require_POST
+def retry_failed_limit(request):
+    """지정된 개수만큼 FAILED 상태의 작업을 PENDING으로 변경"""
+    try:
+        limit = int(request.GET.get('limit', 100))
+        
+        # FAILED 상태의 작업을 지정된 개수만큼 가져오기 (created_at 오름차순 - 오래된 것부터)
+        failed_tasks = DataFetchRequest.objects.filter(
+            status='FAILED'
+        ).order_by('created_at')[:limit]
+        
+        count = 0
+        for task in failed_tasks:
+            task.status = 'PENDING'
+            task.save()
+            # Celery 큐에 등록
+            fetch_stock_data.delay(task.id)
+            count += 1
+        
+        if count == 0:
+            return JsonResponse({
+                'success': True,
+                'count': 0,
+                'message': 'FAILED 상태의 작업이 없습니다.'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'count': count,
+            'message': f'{count}개의 FAILED 작업을 PENDING 상태로 변경하고 큐에 등록했습니다.'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'재시도 중 오류 발생: {str(e)}'
+        }, status=500)
 
 
 @require_POST
@@ -463,10 +516,11 @@ def bulk_request_prices(request):
         
         registered_count = 0
         already_exists_count = 0
+        restarted_count = 0
         
         for symbol in symbols:
-            # 이미 존재하는 요청인지 확인 (interval 포함)
-            existing = DataFetchRequest.objects.filter(
+            # 이미 진행 중인 요청인지 확인 (PENDING/PROCESSING)
+            existing_active = DataFetchRequest.objects.filter(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
@@ -474,26 +528,42 @@ def bulk_request_prices(request):
                 status__in=['PENDING', 'PROCESSING']
             ).first()
             
-            if existing:
+            if existing_active:
                 already_exists_count += 1
                 continue
             
-            # 새로운 요청 생성 (interval 포함)
-            DataFetchRequest.objects.create(
+            # COMPLETED/FAILED 상태의 기존 요청이 있으면 재시작, 없으면 새로 생성
+            obj, created = DataFetchRequest.objects.update_or_create(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
                 interval=interval,
-                status='PENDING'
+                defaults={'status': 'PENDING'}
             )
-            registered_count += 1
+            
+            if created:
+                registered_count += 1
+            else:
+                restarted_count += 1
+        
+        # 결과 메시지 구성
+        message_parts = []
+        if registered_count > 0:
+            message_parts.append(f'신규 {registered_count}개')
+        if restarted_count > 0:
+            message_parts.append(f'재시작 {restarted_count}개')
+        if already_exists_count > 0:
+            message_parts.append(f'진행중 {already_exists_count}개')
+        
+        message = ', '.join(message_parts) + f' 작업 처리 완료 (간격: {interval})'
         
         return JsonResponse({
             'success': True,
             'registered_count': registered_count,
+            'restarted_count': restarted_count,
             'already_exists_count': already_exists_count,
             'interval': interval,
-            'message': f'{registered_count}개 작업 등록 완료 (간격: {interval})'
+            'message': message
         })
         
     except json.JSONDecodeError:
