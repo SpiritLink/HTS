@@ -1,0 +1,57 @@
+{
+  "info": {
+    "_postman_id": "c69539bd-fb70-4e50-a5bf-171c95defa2f",
+    "name": "klpgateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "klpgateway/log",
+      "id": "5d31d586-0abd-418c-b328-3a6e798cc246",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5200/Log/Level",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5200",
+          "path": [
+            "Log",
+            "Level"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "klpgateway/log",
+      "id": "a9fa248a-4b6a-49ab-9e4e-f4cde3c29332",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5200/Log/Level",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5200",
+          "path": [
+            "Log",
+            "Level"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

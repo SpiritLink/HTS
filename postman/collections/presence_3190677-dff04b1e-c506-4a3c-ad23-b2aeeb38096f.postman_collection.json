@@ -1,0 +1,76 @@
+{
+  "info": {
+    "_postman_id": "dff04b1e-c506-4a3c-ad23-b2aeeb38096f",
+    "name": "presence",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "select_user_list",
+      "id": "49c92af4-7595-4cf6-903c-5483d10d035e",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"Ssn\": 179,\r\n    \"Gsn\": 456\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/presence/select_user",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "presence",
+            "select_user"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "test/insert_user",
+      "id": "f56abe9d-10ee-4562-b199-afbcbf73b9be",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"requestId\": 12345,\r\n    \"gsn\": 67890,\r\n    \"ugAddress\": \"localhost\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/presence/test/insert_user",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "presence",
+            "test",
+            "insert_user"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

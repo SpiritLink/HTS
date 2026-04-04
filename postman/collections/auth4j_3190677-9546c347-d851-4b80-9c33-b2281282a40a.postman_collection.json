@@ -1,0 +1,138 @@
+{
+  "info": {
+    "_postman_id": "9546c347-d851-4b80-9c33-b2281282a40a",
+    "name": "auth4j",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Logout_Test",
+      "id": "dafe2081-51aa-4259-8bfb-d33502cc1489",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "login",
+      "id": "72292828-a6da-4c9e-8886-5487b517c315",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"membership_type\": 3,\r\n  \"ssn\": 226,\r\n  \"gsn\": 7868030,\r\n   \"auth_info\": \"auth_info\": \"ver2|{\\\"param_1\\\":\\\"g1.0.12\\\",\\\"pmang_plus\\\":\\\"7868030|811|WINPC|KR|756b21c22d7b653a8ea4d5c1bc03362aada70d61|1708648928234\\\",\\\"asset_req_kick\\\":\\\"no\\\",\\\"captcha_pass\\\":\\\"no\\\",\\\"app_id\\\":811,\\\"udid\\\":\\\"\\\"}\",\r\n   \"access_token\": {\r\n    \"usn\": -1,\r\n    \"cert_source\": \"PHONE\",\r\n    \"ci\": \"119621101||CsbaJjUb7100IseZvP50yossqpyq4lmYep+eUHYD2pSeAzdVEiSGaFyX78fweUXg0fMj9m4r3H0dC\",\r\n    \"publisher\": \"MC\",\r\n    \"is_global\": true,\r\n    \"country_cd\": \"KR\",\r\n    \"anonymous_yn\": \"N\"\r\n  }\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/test/on_login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "test",
+            "on_login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "kickout",
+      "id": "cfcdc52b-7db2-4fc7-a461-e1bbc7db2bea",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"membership_type\": 3,\r\n  \"ssn\": 226,\r\n  \"gsn\": 7868030,\r\n   \"auth_info\": \"auth_info\": \"ver2|{\\\"param_1\\\":\\\"g1.0.12\\\",\\\"pmang_plus\\\":\\\"7868030|811|WINPC|KR|756b21c22d7b653a8ea4d5c1bc03362aada70d61|1708648928234\\\",\\\"asset_req_kick\\\":\\\"no\\\",\\\"captcha_pass\\\":\\\"no\\\",\\\"app_id\\\":811,\\\"udid\\\":\\\"\\\"}\",\r\n   \"access_token\": {\r\n    \"usn\": -1,\r\n    \"cert_source\": \"PHONE\",\r\n    \"ci\": \"119621101||CsbaJjUb7100IseZvP50yossqpyq4lmYep+eUHYD2pSeAzdVEiSGaFyX78fweUXg0fMj9m4r3H0dC\",\r\n    \"publisher\": \"MC\",\r\n    \"is_global\": true,\r\n    \"country_cd\": \"KR\",\r\n    \"anonymous_yn\": \"N\"\r\n  }\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/test/on_login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "test",
+            "on_login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "login Copy",
+      "id": "8c02e105-f277-458e-91af-f8d9d086c7b4",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"membership_type\": 3,\r\n  \"ssn\": 226,\r\n  \"gsn\": 7868030,\r\n   \"auth_info\": \"auth_info\": \"ver2|{\\\"param_1\\\":\\\"g1.0.12\\\",\\\"pmang_plus\\\":\\\"7868030|811|WINPC|KR|756b21c22d7b653a8ea4d5c1bc03362aada70d61|1708648928234\\\",\\\"asset_req_kick\\\":\\\"no\\\",\\\"captcha_pass\\\":\\\"no\\\",\\\"app_id\\\":811,\\\"udid\\\":\\\"\\\"}\",\r\n   \"access_token\": {\r\n    \"usn\": -1,\r\n    \"cert_source\": \"PHONE\",\r\n    \"ci\": \"119621101||CsbaJjUb7100IseZvP50yossqpyq4lmYep+eUHYD2pSeAzdVEiSGaFyX78fweUXg0fMj9m4r3H0dC\",\r\n    \"publisher\": \"MC\",\r\n    \"is_global\": true,\r\n    \"country_cd\": \"KR\",\r\n    \"anonymous_yn\": \"N\"\r\n  }\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/test/on_login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "test",
+            "on_login"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "workspace": {
+    "id": "fb2a2108-5235-4cd6-8622-a1edde5596b0"
+  },
+  "entities": {
+    "collections": [
+      "../postman/collections/pmbloadrunner_3190677-2f30c3aa-38ba-405b-8e64-9ec92e275c6e.postman_collection.json",
+      "../postman/collections/StressTestTool_3190677-7718faa3-2b95-4077-ab6a-5dee759b222e.postman_collection.json",
+      "../postman/collections/auth4j_3190677-9546c347-d851-4b80-9c33-b2281282a40a.postman_collection.json",
+      "../postman/collections/klpgateway_3190677-c69539bd-fb70-4e50-a5bf-171c95defa2f.postman_collection.json",
+      "../postman/collections/presence_3190677-dff04b1e-c506-4a3c-ad23-b2aeeb38096f.postman_collection.json",
+      "../postman/collections/Postman Echo_3190677-f695cab7-6878-eb55-7943-ad88e1ccfd65.postman_collection.json"
+    ],
+    "environments": [
+      "../postman/environments/aws_3190677-216a3ff4-fa09-52f4-5e0d-2ff4e7c73423.postman_environment.json"
+    ],
+    "specs": [],
+    "flows": [],
+    "globals": []
+  }
+}
