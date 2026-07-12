@@ -188,6 +188,19 @@ def fetch_stock_data(self, request_id):
                 # KST 시간대 설정
                 kst_tz = pytz.timezone('Asia/Seoul')
                 
+                # 중복 방지를 위한 기존 데이터 조회
+                start_dt_kst = kst_tz.localize(start_datetime)
+                end_dt_kst = kst_tz.localize(end_datetime)
+                existing_timestamps = set(
+                    StockPrice.objects.filter(
+                        symbol=symbol,
+                        market=stock.market,
+                        interval=interval,
+                        timestamp__gte=start_dt_kst,
+                        timestamp__lte=end_dt_kst
+                    ).values_list('timestamp', flat=True)
+                )
+                
                 for index, row in hist.iterrows():
                     # Yahoo Finance 데이터의 timestamp 처리
                     if hasattr(index, 'to_pydatetime'):
@@ -202,6 +215,11 @@ def fetch_stock_data(self, request_id):
                     else:
                         # naive datetime -> KST aware
                         timestamp = kst_tz.localize(dt)
+                    
+                    # 중복 데이터인 경우 스킵
+                    if timestamp in existing_timestamps:
+                        continue
+                    existing_timestamps.add(timestamp)
                     
                     price_date = timestamp.date()
                     trading_days_in_data.add(price_date)
@@ -220,10 +238,10 @@ def fetch_stock_data(self, request_id):
                     ))
                 
                 # 벌크 생성
-                created_records = StockPrice.objects.bulk_create(
-                    price_objects,
-                    ignore_conflicts=True
-                )
+                if price_objects:
+                    created_records = StockPrice.objects.bulk_create(
+                        price_objects
+                    )
                 
                 # 데이터 저장 후 Redis 캐시 무효화
                 deleted_count = invalidate_price_cache(symbol, interval)
