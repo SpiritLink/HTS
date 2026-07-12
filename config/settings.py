@@ -76,16 +76,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# PostgreSQL 설정
+# Oracle DB 설정
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',       # 구성하신 PostgreSQL 데이터베이스 이름으로 변경하세요
-        'USER': 'yoojisang',     # 사용자명
-        'PASSWORD': '1q2w3e4r', # 비밀번호
-        'HOST': '127.0.0.1',    # DB 호스트 주소 (로컬인 경우 127.0.0.1)
-        'PORT': '5432',         # 기본 포트
+        'ENGINE': 'django.db.backends.oracle',
+        'NAME': 'FREE',
+        'USER': 'SYSTEM',
+        'PASSWORD': 'Xeneon9708!',
+        'HOST': '127.0.0.1',
+        'PORT': '1521',
     }
 }
 
