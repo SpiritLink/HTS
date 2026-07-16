@@ -107,7 +107,10 @@
     <div class="container">
         <h1 style="display: flex; justify-content: space-between; align-items: center;">
             <span>서버 작업 조회 메뉴</span>
-            <a href="{% url 'hts:index' %}" class="btn-secondary" style="font-size: 14px; padding: 8px 16px;">메인으로 돌아가기</a>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <a href="{% url 'hts:etc' %}" class="btn-secondary" style="font-size: 14px; padding: 8px 16px; text-decoration: none;">기타메뉴</a>
+                <a href="{% url 'hts:index' %}" class="btn-secondary" style="font-size: 14px; padding: 8px 16px; text-decoration: none;">메인으로 돌아가기</a>
+            </div>
         </h1>
 
         <!-- 1. Redis 큐 실시간 상태 -->
