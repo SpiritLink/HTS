@@ -35,7 +35,11 @@
         <p class="description">안전하고 편리한 모의 주식 거래를 시작해 보세요.<br>서비스를 이용하시려면 로그인이 필요합니다.</p>
 
         <div class="btn-group">
-            <a href="{% url 'hts:login' %}" class="btn btn-primary">로그인 화면으로 이동</a>
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'hts:dashboard' %}" class="btn btn-primary">잔고 조회</a>
+            {% else %}
+                <a href="{% url 'hts:login' %}" class="btn btn-primary">로그인 화면으로 이동</a>
+            {% endif %}
             <a href="{% url 'hts:info_lookup' %}" class="btn btn-info">주식 정보 조회</a>
             <a href="{% url 'hts:task_lookup' %}" class="btn btn-info" style="background-color: #6f42c1; border-color: #6f42c1;">서버 작업 조회</a>
             <a href="{% url 'hts:dev_guide' %}" class="btn btn-dark">개발자 가이드 (API 문서)</a>
