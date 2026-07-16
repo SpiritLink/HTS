@@ -370,6 +370,8 @@ def process_user_events_task(user_id):
     """
     사용자의 거래 이벤트를 비동기로 백그라운드 처리합니다.
     """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     from .event_sourcing import process_user_events
     try:
         user = User.objects.get(id=user_id)
