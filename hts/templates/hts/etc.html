@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주식 거래 시스템 (HTS)</title>
+    <title>기타 메뉴 - 주식 거래 시스템 (HTS)</title>
     <style>
         /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
         body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -27,22 +27,22 @@
 
         .btn-dark { background-color: #343a40; color: #fff; border: 1px solid #343a40; }
         .btn-dark:hover { background-color: #23272b; border-color: #1d2124; }
+
+        .btn-secondary { background-color: #6c757d; color: #fff; border: 1px solid #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
     </style>
 </head>
 <body>
     <main class="main-container">
-        <h1>주식 거래 시스템 (HTS)</h1>
-        <p class="description">안전하고 편리한 모의 주식 거래를 시작해 보세요.<br>서비스를 이용하시려면 로그인이 필요합니다.</p>
+        <h1>기타 메뉴</h1>
+        <p class="description">추가적인 시스템 관리 및 개발 도구 메뉴입니다.</p>
 
         <div class="btn-group">
-            {% if request.user.is_authenticated %}
-                <a href="{% url 'hts:dashboard' %}" class="btn btn-primary">잔고 조회</a>
-            {% else %}
-                <a href="{% url 'hts:login' %}" class="btn btn-primary">로그인 화면으로 이동</a>
-            {% endif %}
-            <a href="{% url 'hts:info_lookup' %}" class="btn btn-info">주식 정보 조회</a>
-            <a href="{% url 'hts:etc' %}" class="btn btn-info" style="background-color: #6f42c1; border-color: #6f42c1;">기타</a>
-            <a href="{% url 'hts:register' %}" class="btn btn-outline">새 계정 만들기 (회원가입)</a>
+            <a href="{% url 'hts:task_lookup' %}" class="btn btn-info" style="background-color: #6f42c1; border-color: #6f42c1;">서버 작업 조회</a>
+            <a href="{% url 'hts:dev_guide' %}" class="btn btn-dark">개발자 가이드 (API 문서)</a>
+            <a href="/admin/" class="btn btn-outline">시스템 관리자(Admin) 페이지</a>
+            <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 15px 0;">
+            <a href="{% url 'hts:index' %}" class="btn btn-secondary">이전 화면으로 (메인)</a>
         </div>
     </main>
 </body>

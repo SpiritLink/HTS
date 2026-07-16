@@ -5,6 +5,7 @@ app_name = 'hts'
 
 urlpatterns = [
     path('', controllers.index, name='index'),
+    path('etc/', controllers.etc_view, name='etc'),
     path('login/', controllers.login_view, name='login'),
     path('register/', controllers.register_view, name='register'),
     path('logout/', controllers.logout_view, name='logout'),

@@ -17,6 +17,10 @@ def index(request):
     return render(request, 'hts/index.html')
 
 
+def etc_view(request):
+    return render(request, 'hts/etc.html')
+
+
 def login_view(request):
     # 이미 로그인한 유저는 대시보드로 즉시 이동
     if request.user.is_authenticated:
