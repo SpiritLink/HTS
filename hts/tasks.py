@@ -363,3 +363,19 @@ def cleanup_old_completed_requests(days=7):
     deleted_count, _ = old_requests.delete()
     logger.info(f"[CLEANUP] Deleted {deleted_count} old requests")
     return deleted_count
+
+
+@shared_task
+def process_user_events_task(user_id):
+    """
+    사용자의 거래 이벤트를 비동기로 백그라운드 처리합니다.
+    """
+    from .event_sourcing import process_user_events
+    try:
+        user = User.objects.get(id=user_id)
+        process_user_events(user)
+        logger.info(f"[TRADE] Successfully processed events for user ID: {user_id}")
+    except User.DoesNotExist:
+        logger.error(f"[TRADE] User with ID {user_id} does not exist")
+    except Exception as e:
+        logger.error(f"[TRADE] Error processing events for user ID {user_id}: {str(e)}")

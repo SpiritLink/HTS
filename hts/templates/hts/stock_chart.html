@@ -379,11 +379,80 @@
                 <canvas id="volumeChart"></canvas>
             </div>
         </div>
+
+        {% if request.user.is_authenticated %}
+        <!-- 주식 주문 패널 -->
+        <div class="trade-panel" style="padding: 30px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
+            <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 20px; border-left: 4px solid #004ea2; padding-left: 10px; color: #111;">📉 주식 주문</h3>
+            <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 150px; flex: 1;">
+                    <label for="order-type" style="font-size: 13px; color: #666; font-weight: bold;">주문 구분</label>
+                    <select id="order-type" style="padding: 12px; border-radius: 6px; border: 1px solid #ced4da; font-size: 14px; background-color: #fff; width: 100%;">
+                        <option value="BUY">매수 (BUY)</option>
+                        <option value="SELL">매도 (SELL)</option>
+                    </select>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 150px; flex: 1;">
+                    <label for="order-quantity" style="font-size: 13px; color: #666; font-weight: bold;">주문 수량 (주)</label>
+                    <input type="number" id="order-quantity" min="1" value="1" style="padding: 12px; border-radius: 6px; border: 1px solid #ced4da; font-size: 14px; width: 100%;">
+                </div>
+                <button type="button" onclick="submitOrder()" style="padding: 14px 28px; font-weight: bold; cursor: pointer; border: none; border-radius: 6px; background-color: #004ea2; color: #fff; font-size: 14px; height: 46px; transition: background-color 0.2s;">주문 전송</button>
+            </div>
+            <div id="order-message" style="margin-top: 20px; padding: 15px; border-radius: 6px; display: none; font-size: 14px; font-weight: bold;"></div>
+        </div>
+        {% endif %}
     </div>
 
     <script>
         const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
         const SYMBOL = '{{ symbol }}';
+        
+        async function submitOrder() {
+            const orderType = document.getElementById('order-type').value;
+            const quantity = document.getElementById('order-quantity').value;
+            const msgDiv = document.getElementById('order-message');
+            
+            if (!msgDiv) return;
+            
+            msgDiv.style.display = 'none';
+            msgDiv.className = '';
+            
+            try {
+                const response = await fetch('{% url "hts:submit_trade" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({
+                        symbol: SYMBOL,
+                        order_type: orderType,
+                        quantity: quantity
+                    })
+                });
+                
+                const data = await response.json();
+                
+                msgDiv.style.display = 'block';
+                if (response.ok && data.success) {
+                    msgDiv.style.backgroundColor = '#d4edda';
+                    msgDiv.style.color = '#155724';
+                    msgDiv.style.border = '1px solid #c3e6cb';
+                    msgDiv.textContent = data.message;
+                } else {
+                    msgDiv.style.backgroundColor = '#f8d7da';
+                    msgDiv.style.color = '#721c24';
+                    msgDiv.style.border = '1px solid #f5c6cb';
+                    msgDiv.textContent = data.message || '주문 처리 중 오류가 발생했습니다.';
+                }
+            } catch (error) {
+                msgDiv.style.display = 'block';
+                msgDiv.style.backgroundColor = '#f8d7da';
+                msgDiv.style.color = '#721c24';
+                msgDiv.style.border = '1px solid #f5c6cb';
+                msgDiv.textContent = '네트워크 오류가 발생했습니다: ' + error.message;
+            }
+        }
         
         // 전역 변수
         let currentPeriodDays = 30;

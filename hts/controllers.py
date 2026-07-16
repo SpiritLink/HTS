@@ -14,6 +14,9 @@ import json
 
 
 def index(request):
+    if request.user.is_authenticated:
+        from .event_sourcing import check_and_create_snapshots
+        check_and_create_snapshots(request.user)
     return render(request, 'hts/index.html')
 
 
@@ -75,6 +78,9 @@ def logout_view(request):
 
 @login_required(login_url='/hts/login/')
 def dashboard(request):
+    from .event_sourcing import check_and_create_snapshots
+    check_and_create_snapshots(request.user)
+    
     # 1. Controller가 Service에게 비즈니스 로직 처리(계산)를 위임
     portfolio_data = get_user_portfolio(request.user)
     
@@ -765,3 +771,99 @@ def update_stocks_from_nasdaq(request):
             'success': False,
             'message': f'종목 정보 갱신 중 오류 발생: {str(e)}'
         }, status=500)
+
+
+@login_required(login_url='/hts/login/')
+@require_POST
+def submit_trade_view(request):
+    """
+    주식 거래 요청(매수/매도)을 받아 PENDING 이벤트로 저장하고 Celery 작업을 호출합니다.
+    """
+    from .models import UserBalanceSnapshot, StockTradeEvent, Stock
+    from .tasks import process_user_events_task
+    from django.utils import timezone
+    import json
+    
+    # 1. 정산 오류 스냅샷 검사
+    if UserBalanceSnapshot.objects.filter(user=request.user, status='FAILED').exists():
+        return JsonResponse({
+            'success': False,
+            'message': '데이터 정산이 필요합니다. 관리자에게 문의하세요.'
+        }, status=400)
+        
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, TypeError):
+        data = request.POST
+        
+    symbol = data.get('symbol')
+    order_type = data.get('order_type')
+    quantity_str = data.get('quantity')
+    
+    if not symbol or not order_type or not quantity_str:
+        return JsonResponse({
+            'success': False,
+            'message': '필수 매개변수가 누락되었습니다.'
+        }, status=400)
+        
+    try:
+        quantity = int(quantity_str)
+        if quantity <= 0:
+            raise ValueError()
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'message': '수량은 1 이상의 정수여야 합니다.'
+        }, status=400)
+        
+    if order_type not in ['BUY', 'SELL']:
+        return JsonResponse({
+            'success': False,
+            'message': '올바르지 않은 주문 유형입니다.'
+        }, status=400)
+        
+    # 종목 존재 여부 확인
+    if not Stock.objects.filter(symbol=symbol).exists():
+        return JsonResponse({
+            'success': False,
+            'message': '존재하지 않는 주식 종목입니다.'
+        }, status=400)
+        
+    # 2. PENDING 이벤트 생성 및 저장
+    event = StockTradeEvent.objects.create(
+        user=request.user,
+        stock_symbol=symbol,
+        event_type=order_type,
+        quantity=quantity,
+        status='PENDING',
+        created_at=timezone.now()
+    )
+    
+    # 3. Celery 백그라운드 처리 등록
+    process_user_events_task.delay(request.user.id)
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'주문이 접수되었습니다. (이벤트 ID: {event.id})',
+        'event_id': event.id
+    })
+
+
+@login_required(login_url='/hts/login/')
+def trade_history_view(request):
+    """
+    사용자의 주식 매매 이벤트 내역 조회 전용 페이지
+    """
+    from .models import StockTradeEvent
+    event_list = StockTradeEvent.objects.filter(user=request.user).order_by('-id')
+    
+    paginator = Paginator(event_list, 15)
+    page = request.GET.get('page')
+    try:
+        events = paginator.page(page)
+    except PageNotAnInteger:
+        events = paginator.page(1)
+    except EmptyPage:
+        events = paginator.page(paginator.num_pages)
+        
+    return render(request, 'hts/trade_history.html', {'events': events})

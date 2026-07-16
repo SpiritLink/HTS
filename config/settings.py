@@ -77,14 +77,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Oracle DB 설정
+import oracledb
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.oracle',
-        'NAME': 'FREE',
+        'NAME': oracledb.makedsn(os.environ.get('DB_HOST', '127.0.0.1'), int(os.environ.get('DB_PORT', 1521)), service_name='FREEPDB1'),
         'USER': 'SYSTEM',
         'PASSWORD': 'Xeneon9708!',
-        'HOST': '127.0.0.1',
-        'PORT': '1521',
     }
 }
 

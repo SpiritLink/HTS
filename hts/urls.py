@@ -33,4 +33,6 @@ urlpatterns = [
     path('tasks/redis-cache/api/list/', controllers.redis_cache_list_api, name='redis_cache_list'),
     path('tasks/redis-cache/api/delete-selected/', controllers.redis_cache_delete_selected, name='redis_cache_delete_selected'),
     path('tasks/redis-cache/api/delete-all/', controllers.redis_cache_delete_all, name='redis_cache_delete_all'),
+    path('trade/', controllers.submit_trade_view, name='submit_trade'),
+    path('trade-history/', controllers.trade_history_view, name='trade_history'),
 ]

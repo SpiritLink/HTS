@@ -47,6 +47,7 @@
         <header class="header-area">
             <h2>{{ request.user.username }}님의 계좌 정보</h2>
             <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="{% url 'hts:trade_history' %}" class="btn-secondary" style="text-decoration: none; display: inline-block; background-color: #004ea2; color: #fff; border-color: #004ea2;">거래 처리 현황</a>
                 <a href="{% url 'hts:index' %}" class="btn-secondary" style="text-decoration: none; display: inline-block;">메인화면</a>
                 <form method="POST" action="{% url 'hts:logout' %}" style="margin: 0;">
                     {% csrf_token %}

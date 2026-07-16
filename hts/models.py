@@ -168,3 +168,37 @@ class StockTradingCalendar(models.Model):
                 'has_price_data': has_price_data
             }
         )
+
+
+class StockTradeEvent(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_events')
+    stock_symbol = models.CharField(max_length=20, db_index=True)
+    event_type = models.CharField(max_length=10) # "BUY" or "SELL"
+    quantity = models.IntegerField()
+    status = models.CharField(max_length=20, default='PENDING', db_index=True) # "PENDING", "PROCESSED", "FAILED"
+    created_at = models.DateTimeField(db_index=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"Event {self.id}: {self.user.username} {self.event_type} {self.stock_symbol} x {self.quantity} ({self.status})"
+
+
+class UserBalanceSnapshot(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='balance_snapshots')
+    snapshot_date = models.DateField(db_index=True)
+    balance = models.FloatField()
+    portfolio = models.JSONField(default=dict)
+    status = models.CharField(max_length=20, default='COMPLETED', db_index=True) # "COMPLETED", "FAILED"
+    error_details = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'snapshot_date')
+        ordering = ['-snapshot_date']
+
+    def __str__(self):
+        return f"Snapshot {self.snapshot_date} for {self.user.username} ({self.status})"

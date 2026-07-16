@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>거래 처리 현황 - HTS</title>
+    <style>
+        /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
+        .history-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .header-area { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
+        .header-area h2 { margin: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; }
+        
+        .btn-secondary { padding: 10px 20px; background-color: #fff; color: #495057; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
+
+        /* 공공기관 표준 표(Table) 스타일 */
+        .table-krds { width: 100%; border-collapse: collapse; margin-bottom: 30px; text-align: center; }
+        .table-krds th, .table-krds td { padding: 14px; border-bottom: 1px solid #dee2e6; font-size: 14px; }
+        .table-krds th { background-color: #f8f9fa; font-weight: 600; color: #111; border-top: 2px solid #495057; border-bottom: 2px solid #dee2e6; }
+        .table-krds tbody tr:hover { background-color: #f1f3f5; transition: background-color 0.2s; }
+        
+        /* 상태 배지 */
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-pending { background-color: #ffeeba; color: #856404; }
+        .badge-processed { background-color: #d4edda; color: #155724; }
+        .badge-failed { background-color: #f8d7da; color: #721c24; }
+        
+        /* 페이지네이션 */
+        .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 20px; }
+        .pagination a, .pagination span { padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; text-decoration: none; color: #004ea2; font-size: 14px; }
+        .pagination .active { background-color: #004ea2; color: #fff; border-color: #004ea2; }
+        .pagination .disabled { color: #6c757d; pointer-events: none; background-color: #e9ecef; }
+        
+        .empty-msg { text-align: center; padding: 50px 20px; color: #777; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <main class="history-container">
+        <header class="header-area">
+            <h2>거래 처리 현황</h2>
+            <a href="{% url 'hts:dashboard' %}" class="btn-secondary">대시보드로 이동</a>
+        </header>
+
+        {% if events %}
+            <table class="table-krds">
+                <thead>
+                    <tr>
+                        <th>이벤트 ID</th>
+                        <th>종목</th>
+                        <th>구분</th>
+                        <th>수량</th>
+                        <th>상태</th>
+                        <th>주문 시각</th>
+                        <th>처리/실패 사유</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td><strong>{{ event.id }}</strong></td>
+                        <td>{{ event.stock_symbol }}</td>
+                        <td>
+                            {% if event.event_type == 'BUY' %}
+                                <span style="color: #e31b23; font-weight: bold;">매수</span>
+                            {% else %}
+                                <span style="color: #2179f5; font-weight: bold;">매도</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ event.quantity }} 주</td>
+                        <td>
+                            {% if event.status == 'PENDING' %}
+                                <span class="badge badge-pending">대기 중</span>
+                            {% elif event.status == 'PROCESSED' %}
+                                <span class="badge badge-processed">완료</span>
+                            {% else %}
+                                <span class="badge badge-failed">실패</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ event.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td style="text-align: left; font-size: 13px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ event.error_message }}">
+                            {% if event.status == 'PROCESSED' %}
+                                <span style="color: #28a745;">성공적으로 체결됨</span>
+                            {% elif event.status == 'FAILED' %}
+                                <span style="color: #dc3545;">{{ event.error_message }}</span>
+                            {% else %}
+                                <span style="color: #6c757d;">대기 중...</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination">
+                {% if events.has_previous %}
+                    <a href="?page=1">&laquo; 처음</a>
+                    <a href="?page={{ events.previous_page_number }}">이전</a>
+                {% else %}
+                    <span class="disabled">&laquo; 처음</span>
+                    <span class="disabled">이전</span>
+                {% endif %}
+
+                {% for num in events.paginator.page_range %}
+                    {% if events.number == num %}
+                        <span class="active">{{ num }}</span>
+                    {% elif num > events.number|add:-3 and num < events.number|add:3 %}
+                        <a href="?page={{ num }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if events.has_next %}
+                    <a href="?page={{ events.next_page_number }}">다음</a>
+                    <a href="?page={{ events.paginator.num_pages }}">끝 &raquo;</a>
+                {% else %}
+                    <span class="disabled">다음</span>
+                    <span class="disabled">끝 &raquo;</span>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="empty-msg">주문 내역이 존재하지 않습니다.</div>
+        {% endif %}
+    </main>
+</body>
+</html>
