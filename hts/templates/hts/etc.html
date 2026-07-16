@@ -6,14 +6,15 @@
     <title>기타 메뉴 - 주식 거래 시스템 (HTS)</title>
     <style>
         /* 디지털 정부서비스 UI/UX 가이드라인 기반 스타일 */
-        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .main-container { background: #fff; padding: 50px 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; text-align: center; }
-        h1 { margin-top: 0; font-size: 28px; color: #111; margin-bottom: 16px; letter-spacing: -0.5px; }
+        body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 40px 20px; }
+        .main-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .header-area { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
+        .header-area h2 { margin: 0; font-size: 26px; color: #111; letter-spacing: -0.5px; }
         p.description { font-size: 16px; color: #555; margin-bottom: 40px; line-height: 1.5; }
 
         /* 넉넉한 터치 영역과 고대비 색상을 적용한 버튼 그룹 */
         .btn-group { display: flex; flex-direction: column; gap: 12px; }
-        .btn { display: block; width: 100%; padding: 16px; border-radius: 6px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; transition: all 0.2s; }
+        .btn { display: block; width: 100%; padding: 16px; border-radius: 6px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; transition: all 0.2s; text-align: center; }
 
         /* 정부서비스 표준 강조 색상 */
         .btn-primary { background-color: #004ea2; color: #fff; border: 1px solid #004ea2; }
@@ -28,21 +29,22 @@
         .btn-dark { background-color: #343a40; color: #fff; border: 1px solid #343a40; }
         .btn-dark:hover { background-color: #23272b; border-color: #1d2124; }
 
-        .btn-secondary { background-color: #6c757d; color: #fff; border: 1px solid #6c757d; }
-        .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
+        .btn-secondary { padding: 10px 20px; background-color: #fff; color: #495057; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: #f1f3f5; color: #111; }
     </style>
 </head>
 <body>
     <main class="main-container">
-        <h1>기타 메뉴</h1>
+        <header class="header-area">
+            <h2>기타 메뉴</h2>
+            <a href="{% url 'hts:index' %}" class="btn-secondary" style="text-decoration: none; display: inline-block;">메인화면</a>
+        </header>
         <p class="description">추가적인 시스템 관리 및 개발 도구 메뉴입니다.</p>
 
         <div class="btn-group">
             <a href="{% url 'hts:task_lookup' %}" class="btn btn-info" style="background-color: #6f42c1; border-color: #6f42c1;">서버 작업 조회</a>
             <a href="{% url 'hts:dev_guide' %}" class="btn btn-dark">개발자 가이드 (API 문서)</a>
             <a href="/admin/" class="btn btn-outline">시스템 관리자(Admin) 페이지</a>
-            <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 15px 0;">
-            <a href="{% url 'hts:index' %}" class="btn btn-secondary">이전 화면으로 (메인)</a>
         </div>
     </main>
 </body>
