@@ -133,11 +133,21 @@ def stock_list_view(request):
 def stock_chart_view(request, symbol):
     """주식 차트 상세 페이지"""
     from .models import Stock
+    from .event_sourcing import is_market_open
+    from django.utils import timezone
     try:
         stock = Stock.objects.get(symbol=symbol)
+        is_open, open_error_reason = is_market_open(stock.market, timezone.now())
     except Stock.DoesNotExist:
         stock = None
-    return render(request, 'hts/stock_chart.html', {'stock': stock, 'symbol': symbol})
+        is_open = False
+        open_error_reason = "존재하지 않는 주식 종목입니다."
+    return render(request, 'hts/stock_chart.html', {
+        'stock': stock, 
+        'symbol': symbol,
+        'is_market_open': is_open,
+        'market_close_reason': open_error_reason
+    })
 
 
 def dev_guide_view(request):

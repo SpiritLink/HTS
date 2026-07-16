@@ -396,8 +396,17 @@
                     <label for="order-quantity" style="font-size: 13px; color: #666; font-weight: bold;">주문 수량 (주)</label>
                     <input type="number" id="order-quantity" min="1" value="1" style="padding: 12px; border-radius: 6px; border: 1px solid #ced4da; font-size: 14px; width: 100%;">
                 </div>
+                {% if is_market_open %}
                 <button type="button" onclick="submitOrder()" style="padding: 14px 28px; font-weight: bold; cursor: pointer; border: none; border-radius: 6px; background-color: #004ea2; color: #fff; font-size: 14px; height: 46px; transition: background-color 0.2s;">주문 전송</button>
+                {% else %}
+                <button type="button" disabled style="padding: 14px 28px; font-weight: bold; cursor: not-allowed; border: none; border-radius: 6px; background-color: #ced4da; color: #6c757d; font-size: 14px; height: 46px;">주문 전송 (거래 불가)</button>
+                {% endif %}
             </div>
+            {% if not is_market_open %}
+            <div style="margin-top: 15px; font-size: 13px; color: #dc3545; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                ⚠️ {{ market_close_reason }}
+            </div>
+            {% endif %}
             <div id="order-message" style="margin-top: 20px; padding: 15px; border-radius: 6px; display: none; font-size: 14px; font-weight: bold;"></div>
         </div>
         {% endif %}
